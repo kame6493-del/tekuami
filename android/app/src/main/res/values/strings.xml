@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">てくあみ</string>
+    <string name="title_activity_main">てくあみ</string>
+    <string name="package_name">jp.tekuami.app</string>
+    <string name="custom_url_scheme">jp.tekuami.app</string>
+</resources>

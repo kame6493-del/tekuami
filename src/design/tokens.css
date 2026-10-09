@@ -1,0 +1,77 @@
+/*
+ * てくあみ デザインの決まり
+ * - 色: 生成りの紙の地に、茜(あかね)1色。中間色は墨の濃淡だけ。グラデーション・ぼかし・影の重ねは使わない
+ * - 文字: 端末の日本語フォント。大きさは 12 / 15 / 17 / 22 / 44 の5段。数字は等幅
+ * - 余白: 8 の倍数(4 は線と文字の間だけ)
+ * - 角丸: 6(ボタン・小さな部品)と 14(下から出る面)の2つ
+ */
+:root {
+  --paper: #f4efe4;
+  --paper-2: #ece5d6;
+  --sheet: #fbf8f1;
+  --ink: #2a2420;
+  --ink-2: #6b6158;
+  --ink-3: #9a8f83;
+  --rule: #ddd3c3;
+  --akane: #b23f29;
+  --akane-press: #943221;
+  --akane-ink: #fffaf4;
+  --akane-wash: #f0ddd3;
+  --ok: #3f6b4c;
+
+  --f-cap: 12px;
+  --f-body: 15px;
+  --f-lead: 17px;
+  --f-title: 22px;
+  --f-hero: 44px;
+
+  --s1: 8px;
+  --s2: 16px;
+  --s3: 24px;
+  --s4: 32px;
+  --s5: 40px;
+  --s6: 48px;
+
+  --r-s: 6px;
+  --r-l: 14px;
+
+  --tap: 48px;
+  --tabbar: 56px;
+
+  --font: -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #1a1613;
+    --paper-2: #231e1a;
+    --sheet: #24201b;
+    --ink: #efe7db;
+    --ink-2: #b4a898;
+    --ink-3: #82786c;
+    --rule: #3a332c;
+    --akane: #de6a4e;
+    --akane-press: #c45a40;
+    --akane-ink: #1a1613;
+    --akane-wash: #3d241d;
+    --ok: #86b391;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #1a1613;
+  --paper-2: #231e1a;
+  --sheet: #24201b;
+  --ink: #efe7db;
+  --ink-2: #b4a898;
+  --ink-3: #82786c;
+  --rule: #3a332c;
+  --akane: #de6a4e;
+  --akane-press: #c45a40;
+  --akane-ink: #1a1613;
+  --akane-wash: #3d241d;
+  --ok: #86b391;
+  color-scheme: dark;
+}
