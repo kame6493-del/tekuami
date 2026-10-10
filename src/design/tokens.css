@@ -3,7 +3,8 @@
  * - 色: 生成りの地に、いちごミルクのようなピンク〜赤。文字はこげ茶。木・毛糸の絵の暖かい色に合わせる
  * - 文字: 丸みのある読みやすいゴシック(iPhone はヒラギノ丸ゴ、ほかは端末の日本語フォント)。手書き風は使わない
  * - 形: ボタンは丸い(高さ52の半分の丸み)、札・カードは角丸16〜18
- * - 絵本の絵と合わせるため、暗い色の画面(ダークモード)は持たない
+ * - 絵本の絵と合わせるため、端末のダークモードには合わせない。代わりに見た目のテーマ3つ(ひだまり・よる・ゆき、見本D)を持つ
+ * - 1.2.0: 主ボタンは見本B・C・D の焦げ茶。数字も焦げ茶
  */
 :root {
   --paper: #fbf3e6;
@@ -25,6 +26,13 @@
   --orange: #e7a246;
   --blue: #7398c6;
   --lock: #e0901f;
+  --btn-1: #a27556;
+  --btn-2: #8a5d42;
+  --btn-3: #7a5038;
+  --btn-edge: #5f3c28;
+  --num: #5a3624;
+  --arc: #d9905a;
+  --arc-bg: #eadfcf;
 
   --f-cap: 12px;
   --f-small: 14px;
@@ -38,4 +46,52 @@
 
   --font: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'Hiragino Sans', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', sans-serif;
   color-scheme: light;
+}
+
+/* テーマ: よる(見本D の紺)。ページの地は明るいまま、ボタンとタブを夜の色に */
+.app[data-look='yoru'] {
+  --paper: #f3eee8;
+  --btn-1: #5a6893;
+  --btn-2: #44517a;
+  --btn-3: #3a4569;
+  --btn-edge: #262e4a;
+  --arc: #7f9ad0;
+  --pink-edge: #8ea3d8;
+}
+
+.app[data-look='yoru'] .tabbar {
+  background: #2c3552;
+  border-top-color: #3b4566;
+}
+
+.app[data-look='yoru'] .tab {
+  color: #c9cfe3;
+}
+
+.app[data-look='yoru'] .tab.is-on {
+  color: #ffd98a;
+}
+
+.app[data-look='yoru'] .tab-icon {
+  filter: invert(0.9) brightness(1.2);
+  mix-blend-mode: screen;
+}
+
+/* テーマ: ゆき(見本D の白と水色) */
+.app[data-look='yuki'] {
+  --paper: #f5f7fa;
+  --card: #ffffff;
+  --card-edge: #e1e7ef;
+  --card-shadow: #d7dfea;
+  --btn-1: #8aa6c4;
+  --btn-2: #6f8daf;
+  --btn-3: #627f9f;
+  --btn-edge: #4a6380;
+  --arc: #7fa6cf;
+  --arc-bg: #dfe6ee;
+  --pink-edge: #8fb2d6;
+}
+
+.app[data-look='yuki'] .tabbar {
+  background: #fbfcfe;
 }

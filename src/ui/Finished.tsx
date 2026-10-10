@@ -2,13 +2,13 @@ import { useState } from 'react';
 import type { AppCtx } from '../App';
 import { itemOf } from '../art/items';
 import { patternOf } from '../art/motifs';
-import { renderShareImage, shareText } from '../art/shareImage';
+import { renderShareImage, shareText, type ShareStyle } from '../art/shareImage';
 import { daysBetween, fmt, mdJa } from '../domain/dates';
 import { progressOf, type Project } from '../domain/knit';
 import { shareImage, tap } from '../platform/native';
 import { Cloud, Confetti, KnitPiece, Ref } from './parts';
 
-/** 札(模様・編んだ期間・合計歩数)。編み上がりと、箱の1枚で使う */
+/** 札(模様・編んだ期間・合計歩数)。編み上がりで使う */
 export function Tag({ p, today }: { p: Project; today: string }) {
   const end = p.finishedOn ?? today;
   const days = Math.max(1, daysBetween(p.startedOn, end) + 1);
@@ -21,7 +21,7 @@ export function Tag({ p, today }: { p: Project; today: string }) {
         <div className="tag-row">
           <dt>模様</dt>
           <dd className="tag-motif">
-            <Ref name={`motif_${pat.id}`} className="tag-motif-art" />
+            <Ref name={`tile_${pat.id}`} className="tag-motif-art" />
             {pat.name}
           </dd>
         </div>
@@ -44,11 +44,11 @@ export function Tag({ p, today }: { p: Project; today: string }) {
   );
 }
 
-export async function saveImage(ctx: AppCtx, p: Project) {
+export async function saveImage(ctx: AppCtx, p: Project, style: ShareStyle = 'polaroid') {
   tap();
   try {
-    const pr = progressOf(p, ctx.cumulative);
-    const url = await renderShareImage(p, pr, p.finishedOn ?? ctx.today);
+    const pr = progressOf(p, p.finishedOn ? p.startTotal + 1e9 : ctx.cumulative);
+    const url = await renderShareImage(p, pr, p.finishedOn ?? ctx.today, style);
     const r = await shareImage(url, shareText(p, pr), `tekuami-${p.finishedOn ?? ctx.today}.png`);
     if (r === 'saved') ctx.toast('画像を保存しました');
   } catch {
@@ -56,7 +56,7 @@ export async function saveImage(ctx: AppCtx, p: Project) {
   }
 }
 
-/** 編み上がり(見本4)。木の床に仕上がった物と札 */
+/** 完成(見本C 4・D)。木の床に仕上がった物、模様が分かる吹き出し、札 */
 export function Finished({ ctx }: { ctx: AppCtx }) {
   const p = ctx.data.current!;
   const item = itemOf(p.item);
@@ -67,20 +67,18 @@ export function Finished({ ctx }: { ctx: AppCtx }) {
       <Cloud className="cloud-done">
         {item.name}が
         <br />
-        編み上がりました!
+        完成しました!
       </Cloud>
       <div className="finished-main">
         <div className="finished-art">
           <KnitPiece item={p.item} palette={p.palette} pattern={p.pattern} label={`編み上がった${item.name}`} />
+          <div className="speech speech-pattern">{patternOf(p.pattern).name}の模様でした♡</div>
         </div>
         <Tag p={p} today={ctx.today} />
       </div>
-      <div className="finished-actions">
-        <button className="btn btn-primary" onClick={ctx.finishCurrent}>
-          箱にしまう
-        </button>
+      <div className="finished-actions finished-actions-col">
         <button
-          className="btn btn-cream"
+          className="btn btn-primary"
           disabled={busy}
           onClick={async () => {
             setBusy(true);
@@ -88,7 +86,10 @@ export function Finished({ ctx }: { ctx: AppCtx }) {
             setBusy(false);
           }}
         >
-          画像で保存
+          画像を保存する
+        </button>
+        <button className="btn btn-cream" onClick={ctx.finishCurrent}>
+          箱にしまう
         </button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dayKey } from './domain/dates';
-import { emptyData, type AppData, type Queued, type Source } from './domain/data';
+import { emptyData, type AppData, type Queued, type Source, type Theme } from './domain/data';
 import { advance, canUseItem, finish, newProject, nextPattern, progressOf, type Project } from './domain/knit';
 import { addDaysTo, cumulativeSince, mergeDays, type Days } from './domain/steps';
 import { seedData } from './dev/demo';
@@ -17,7 +17,12 @@ import { Pick } from './ui/Pick';
 import { PatternPage } from './ui/PatternPage';
 import { PieceView } from './ui/PieceView';
 import { Record } from './ui/Record';
-import { About, Privacy, RowStepsPage, Settings, SourcePage } from './ui/Settings';
+import { About, ContactPage, DataPage, HowtoPage, Privacy, RowStepsPage, Settings, SourcePage, ThemePage } from './ui/Settings';
+import { Preview } from './ui/Preview';
+import { Zukan } from './ui/Zukan';
+import { itemOf } from './art/items';
+import { paletteOf, YARNS } from './art/yarns';
+import { pushWidget } from './platform/widget';
 import { ShareView } from './ui/ShareView';
 import { Splash } from './ui/Splash';
 import { TabBar, type Tab } from './ui/TabBar';
@@ -30,8 +35,14 @@ export type Route =
   | { name: 'rowsteps' }
   | { name: 'about' }
   | { name: 'privacy' }
+  | { name: 'theme' }
+  | { name: 'data' }
+  | { name: 'howto' }
+  | { name: 'contact' }
+  | { name: 'pick' }
   | { name: 'pattern'; item: string }
   | { name: 'colors'; item: string; pattern?: string }
+  | { name: 'preview'; item: string; palette: string; pattern?: string }
   | { name: 'share'; id?: string }
   | { name: 'piece'; id: string }
   | { name: 'bag' };
@@ -57,6 +68,9 @@ export interface AppCtx {
   setRowSteps: (n: number) => void;
   setBilling: (b: BillingState) => void;
   push: (r: Route) => void;
+  /** いちばん上の画面を入れ替える(作品の詳細の前後) */
+  replace: (r: Route) => void;
+  setTheme: (t: Theme) => void;
   pop: () => void;
   goTab: (t: Tab) => void;
   toast: (msg: string) => void;
@@ -81,6 +95,7 @@ function devRoutes(): Route[] {
     if (name === 'pattern') return { name, item: a || 'muffler' } as Route;
     if (name === 'colors') return { name, item: a || 'muffler', ...(b ? { pattern: b } : {}) } as Route;
     if (name === 'piece') return { name, id: a } as Route;
+    if (name === 'preview') return { name, item: a || 'muffler', palette: b || 'ichigo' } as Route;
     if (name === 'share') return { name, ...(a ? { id: a } : {}) } as Route;
     return { name } as Route;
   });
@@ -234,7 +249,9 @@ export default function App() {
     } else {
       commit({ ...closed, queued: null });
       toast('箱にしまいました');
-      setTab('knit');
+      setTab('home');
+      setStack([{ name: 'pick' }]);
+      return;
     }
     setStack([]);
   }, [commit, pro, startFrom, toast]);
@@ -280,6 +297,16 @@ export default function App() {
     tap();
     setStack((s) => s.slice(0, -1));
   }, []);
+  const replace = useCallback((r: Route) => {
+    setStack((s) => [...s.slice(0, -1), r]);
+  }, []);
+  const setTheme = useCallback(
+    (t: Theme) => {
+      const d = dataRef.current;
+      if (d && d.theme !== t) commit({ ...d, theme: t });
+    },
+    [commit],
+  );
   const goTab = useCallback((t: Tab) => {
     tap();
     setStack([]);
@@ -308,6 +335,27 @@ export default function App() {
     return Object.values(data.days).every((v) => v === 0);
   }, [data, health]);
 
+  // ホーム画面・ロック画面のウィジェットへ、次の段までの残りと今日の歩数を渡す
+  useEffect(() => {
+    if (!data) return;
+    const p = data.current;
+    const pr = p ? progressOf(p, cumulative) : null;
+    const pal = p ? paletteOf(p.palette) : null;
+    void pushWidget({
+      v: 1,
+      toNext: pr && !pr.done ? pr.toNextRow : 0,
+      rowSteps: p?.rowSteps ?? data.rowSteps,
+      today: data.days[today] ?? 0,
+      rowsDone: pr?.rowsDone ?? 0,
+      rowsTotal: pr?.rowsTotal ?? 0,
+      item: p ? itemOf(p.item).name : '',
+      main: pal ? YARNS[pal.main][2] : '#f5ead6',
+      sub: pal ? YARNS[pal.sub][2] : '#d65750',
+      theme: data.theme,
+      updatedAt: Date.now(),
+    });
+  }, [data, cumulative, today]);
+
   if (!data) return <div className="boot" />;
 
   const ctx: AppCtx = {
@@ -333,6 +381,8 @@ export default function App() {
     goTab,
     toast,
     resetAll,
+    replace,
+    setTheme,
   };
 
   const top = stack.at(-1);
@@ -345,18 +395,20 @@ export default function App() {
   else if (finishedNow && tab === 'home') body = <Finished ctx={ctx} />;
   else if (tab === 'home') body = <Home ctx={ctx} progress={progress} />;
   else if (tab === 'box') body = <Box ctx={ctx} />;
-  else if (tab === 'knit') body = <Pick ctx={ctx} />;
+  else if (tab === 'zukan') body = <Zukan ctx={ctx} />;
+  else if (tab === 'settings') body = <Settings ctx={ctx} />;
   else body = <Bag ctx={ctx} />;
 
   // タブを出すのは、タブの画面と今日の記録だけ(見本どおり)
   const showTabs = data.onboarded && !(finishedNow && tab === 'home') && (!top || top.name === 'record');
+  const tabOn: Tab = top?.name === 'record' ? 'home' : tab;
 
   return (
-    <div className={`app ${showTabs ? 'has-tabs' : ''}`}>
+    <div className={`app ${showTabs ? 'has-tabs' : ''}`} data-look={data.theme}>
       <main className="screen" key={top ? `${stack.length}-${top.name}` : `${tab}-${data.onboarded}`}>
         {body}
       </main>
-      {showTabs && <TabBar tab={top?.name === 'record' ? 'home' : tab} onChange={goTab} />}
+      {showTabs && <TabBar tab={tabOn} onChange={goTab} />}
       {toastMsg && (
         <div className="toast" role="status">
           {toastMsg}
@@ -384,6 +436,18 @@ function RouteView({ ctx, route }: { ctx: AppCtx; route: Route }) {
       return <Colors ctx={ctx} item={route.item} pattern={route.pattern} />;
     case 'pattern':
       return <PatternPage ctx={ctx} item={route.item} />;
+    case 'preview':
+      return <Preview ctx={ctx} item={route.item} palette={route.palette} pattern={route.pattern} />;
+    case 'pick':
+      return <Pick ctx={ctx} />;
+    case 'theme':
+      return <ThemePage ctx={ctx} />;
+    case 'data':
+      return <DataPage ctx={ctx} />;
+    case 'howto':
+      return <HowtoPage ctx={ctx} />;
+    case 'contact':
+      return <ContactPage ctx={ctx} />;
     case 'share':
       return <ShareView ctx={ctx} id={route.id} />;
     case 'piece':

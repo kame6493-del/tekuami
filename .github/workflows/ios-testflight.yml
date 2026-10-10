@@ -41,6 +41,8 @@ jobs:
           npm run build
           npx cap sync ios
           python3 tools/patch_ios.py
+          # ウィジェット拡張のターゲット(もう入っていれば何もしない)
+          python3 tools/ios_add_widget.py
 
       - name: Compile without signing
         if: inputs.compile_only
@@ -90,6 +92,11 @@ jobs:
         run: |
           codesign -d --entitlements :- "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" | tee "$RUNNER_TEMP/ent.plist"
           grep -q "com.apple.developer.healthkit" "$RUNNER_TEMP/ent.plist" || { echo "::error::HealthKit entitlement is missing"; exit 1; }
+
+      - name: Check the widget extension is inside the archive
+        if: ${{ !inputs.compile_only }}
+        run: |
+          ls "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/PlugIns/TekuamiWidget.appex" || { echo "::error::TekuamiWidget.appex がアーカイブに入っていません"; exit 1; }
 
       - name: Export and upload to TestFlight
         if: ${{ !inputs.compile_only }}

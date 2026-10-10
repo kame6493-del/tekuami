@@ -121,7 +121,8 @@ describe('模様の順番', () => {
     expect(canUseItem('sweater', false)).toBe(false);
     expect(canUseItem('sweater', true)).toBe(true);
     expect(canUseItem('muffler', false)).toBe(true);
-    expect(canUseItem('sock', false)).toBe(true);
+    expect(canUseItem('sock', false)).toBe(false);
+    expect(canUseItem('hat', false)).toBe(true);
     expect(canUseItem('blanket', false)).toBe(false);
     expect(canUseItem('nothing', true)).toBe(false);
   });

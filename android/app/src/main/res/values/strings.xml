@@ -4,4 +4,6 @@
     <string name="title_activity_main">てくあみ</string>
     <string name="package_name">jp.tekuami.app</string>
     <string name="custom_url_scheme">jp.tekuami.app</string>
+    <string name="widget_desc">次の段まで、あと何歩</string>
+    <string name="widget_small_desc">次の段までの残りを円で</string>
 </resources>

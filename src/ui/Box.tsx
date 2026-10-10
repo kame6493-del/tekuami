@@ -26,7 +26,7 @@ export function Box({ ctx }: { ctx: AppCtx }) {
         <Ref name="chest" className="box-chest" />
         <div>
           <h1 className="box-title">わたしの箱</h1>
-          <p className="box-sub">これまでに編んだもの</p>
+          <p className="box-sub">編みあがったものが ずっと残ります</p>
         </div>
       </header>
 
@@ -95,8 +95,8 @@ export function EmptyBox({ ctx }: { ctx: AppCtx }) {
       <Ref name="empty" className="empty-art" />
       <p className="empty-head">まだ編んだものがありません</p>
       <p className="empty-text">{ctx.data.current ? '編み上がると、ここに並びます' : '歩いて、はじめのマフラーを編んでみましょう'}</p>
-      <button className="btn btn-primary" onClick={() => ctx.goTab(ctx.data.current ? 'home' : 'knit')}>
-        {ctx.data.current ? '編みかけを見る' : 'あみものを選ぶ'}
+      <button className="btn btn-primary" onClick={() => (ctx.data.current ? ctx.goTab('home') : ctx.push({ name: 'pick' }))}>
+        {ctx.data.current ? '編みかけを見る' : '次に編むものを選ぶ'}
       </button>
     </div>
   );

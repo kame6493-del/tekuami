@@ -18,8 +18,8 @@ def edit(rel, fn):
 edit('variables.gradle', lambda s: s.replace('minSdkVersion = 24', 'minSdkVersion = 26'))
 
 
-VERSION_CODE = 2
-VERSION_NAME = '1.1.0'
+VERSION_CODE = 3
+VERSION_NAME = '1.2.0'
 
 
 def gradle(s):
@@ -88,3 +88,48 @@ def manifest(s):
 
 
 edit('app/src/main/AndroidManifest.xml', manifest)
+
+
+# 1.2.0: ホーム画面ウィジェット(中・小)。押すとアプリが開くだけ(見るだけ)
+WIDGETS = """
+        <receiver
+            android:name=".TekuamiWidgetProvider"
+            android:exported="false"
+            android:label="てくあみ">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tekuami_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".TekuamiSmallWidgetProvider"
+            android:exported="false"
+            android:label="てくあみ(小)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tekuami_widget_small_info" />
+        </receiver>
+    </application>"""
+
+
+def widgets(s):
+    if 'TekuamiWidgetProvider' in s:
+        return s
+    return s.replace('    </application>', WIDGETS.lstrip('\n'), 1)
+
+
+edit('app/src/main/AndroidManifest.xml', widgets)
+
+
+def activity(s):
+    if 'TekuamiWidgetPlugin' in s:
+        return s
+    return s.replace('registerPlugin(StepSensorPlugin.class);', 'registerPlugin(StepSensorPlugin.class);\n        registerPlugin(TekuamiWidgetPlugin.class);')
+
+
+edit('app/src/main/java/jp/tekuami/app/MainActivity.java', activity)

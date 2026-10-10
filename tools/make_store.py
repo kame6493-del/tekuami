@@ -16,10 +16,10 @@ os.makedirs(os.path.join(STORE, 'iphone'), exist_ok=True)
 os.makedirs(os.path.join(STORE, 'play'), exist_ok=True)
 
 PAPER = (0xFB, 0xF3, 0xE6)
-INK = (0x4B, 0x34, 0x26)
+INK = (0x5A, 0x36, 0x24)
 INK2 = (0x7C, 0x64, 0x55)
 RULE = (0xEF, 0xE0, 0xCA)
-AKANE = (0xD9, 0x64, 0x6F)
+AKANE = (0x8A, 0x5D, 0x42)
 FONT = 'C:/Windows/Fonts/NotoSansJP-VF.ttf'
 
 
@@ -35,11 +35,11 @@ def font(size, weight='Bold'):
 # (名前, 開くクエリ, 押す物, 見出し, 一言)
 NL = chr(10)
 SHOTS = [
-    ('1_knit', 'seed=show', [], '歩いた分だけ、' + NL + 'ひと目ずつ編める', '次の段まで、あと少しが見える。'),
-    ('2_done', 'seed=done', [], '模様は、' + NL + '編み上がるまで秘密', '何が出てくるかは、歩いてからのお楽しみ。'),
-    ('3_box', 'seed=box&tab=box', [], '編んだものは、' + NL + '木の棚にずっと残る', 'マフラー、帽子、ミトン、くつした。'),
-    ('4_next', 'seed=mid&tab=knit', [], '次は何を編もう', '余った歩数は、次のあみものへ。'),
-    ('5_log', 'seed=show&route=record', [], '広告なし。' + NL + '記録は端末の中だけ', 'ヘルスケアの歩数を読むだけ。書きこまない。'),
+    ('1_knit', 'seed=show&hour=10', [], '歩いた分だけ、' + NL + 'ひと目ずつ編める', '窓辺で猫といっしょに、マフラーが編み上がっていく。'),
+    ('2_done', 'seed=done&hour=10', [], '模様は、' + NL + '編み上がるまで秘密', 'ハートかな、雪の結晶かな。歩いてからのお楽しみ。'),
+    ('3_box', 'seed=box&tab=box&hour=10', [], '編んだものは、' + NL + '木の棚にずっと残る', 'マフラー、帽子、ミトン、くつした。'),
+    ('4_night', 'seed=show&hour=21', [], '今日はこれだけ' + NL + '編めました', '歩けた日も、歩けなかった日も、責めません。'),
+    ('5_log', 'seed=show&route=record&hour=10', [], '広告なし。' + NL + '記録は端末の中だけ', 'ヘルスケアの歩数を読むだけ。書きこまない。'),
 ]
 
 
@@ -104,12 +104,14 @@ def feature():
     """1024x500。左に名前、右に冬の窓辺・毛糸のかご・眠る猫(見本のスプラッシュの絵)"""
     W, H = 1024, 500
     c = Image.new('RGB', (W, H), PAPER)
-    art = Image.open(os.path.join(ROOT, 'src', 'assets', 'ref', 'splash.webp')).convert('RGB')
-    # かごと猫のあたり(木々の下から雪の上まで)
-    box = (0, int(art.height * 0.43), art.width, int(art.height * 0.86))
-    part = art.crop(box)
-    k = H / part.height
-    part = part.resize((int(part.width * k), H), Image.LANCZOS)
+    art = Image.open(os.path.join(ROOT, 'src', 'assets', 'ref', 'c_hill.webp')).convert('RGB')
+    # 丘と家のあたりを、右の 600×500 にかぶせる(元の絵の右端は角丸の縁なので削る)
+    art = art.crop((0, 0, int(art.width * 0.93), art.height))
+    tw, th = 600, H
+    k = max(tw / art.width, th / (art.height * 0.62))
+    big = art.resize((int(art.width * k), int(art.height * k)), Image.LANCZOS)
+    top = int(big.height * 0.36)
+    part = big.crop((0, top, tw, top + th))
     x0 = W - part.width
     # 左の端は生成りへなだらかに
     mask = Image.new('L', part.size, 255)

@@ -101,11 +101,24 @@ describe('絵の決まり', () => {
       }
     }
   });
-  it('見本どおり: 模様6つ(無料3)、毛糸の色8組(無料5)、名前も見本の通り', () => {
-    expect(PATTERNS.map((p) => p.name)).toEqual(['ハート', '雪の結晶', '星', '木の葉', 'いぬ', '北欧風']);
-    expect(PATTERNS.filter((p) => !p.pro).length).toBe(3);
-    expect(PALETTES.map((p) => p.name)).toEqual(['いちごみるく', '空と雪', '森のこもれび', 'ラベンダー', 'カフェオレ', '夜空', 'りんご', 'ミモザ']);
-    expect(PALETTES.filter((p) => p.pro).map((p) => p.name)).toEqual(['夜空', 'りんご', 'ミモザ']);
+  it('見本どおり: 模様12種(無料6)、毛糸の色16組(無料8)、名前と並びも見本の通り', () => {
+    expect(PATTERNS.map((p) => p.name)).toEqual(['ハート', '雪の結晶', 'ノルディック', '木の実', 'ねこ', 'やま', '星', 'ツリー', 'いぬ', '北欧風', 'うさぎ', 'お花']);
+    expect(PATTERNS.filter((p) => !p.pro).length).toBe(6);
+    expect(PALETTES.filter((p) => !p.pro).map((p) => p.name)).toEqual(['ミルク', 'いちご', 'もり', 'そら', 'ゆき', 'ラベンダー', 'こむぎ', 'すみ']);
+    expect(PALETTES.filter((p) => p.pro).map((p) => p.name)).toEqual(['さくらもち', 'ねこやなぎ', 'マスタード', 'あかずきん', 'よもぎ', 'あおうみ', 'くり', 'よぞら']);
+  });
+  it('編むもの: 無料はマフラー・ニット帽・ミトン、毛糸ぶくろで くつした・セーター・ひざかけ', () => {
+    expect(ITEMS.filter((i) => !i.pro).map((i) => i.id)).toEqual(['muffler', 'hat', 'mitten']);
+    for (const it of ITEMS) {
+      expect(it.size.length, it.id).toBeGreaterThan(0);
+      expect(it.note.length, it.id).toBeGreaterThan(0);
+    }
+  });
+  it('どの模様の図案も、マフラーの幅に収まり、模様の色が入っている', () => {
+    for (const pt of PATTERNS) {
+      const m = MOTIFS[pt.big];
+      expect(m.some((r) => r.includes('o')), pt.id).toBe(true);
+    }
   });
 });
 
@@ -118,5 +131,28 @@ describe('1段の歩数と予約の保存', () => {
     expect(normalize({ queued: { item: 'hat', palette: 'mori', pattern: 'star' } }, '2026-10-10').queued).toEqual({ item: 'hat', palette: 'mori', pattern: 'star' });
     expect(normalize({ queued: { item: 'hat', palette: 'nope' } }, '2026-10-10').queued).toBeNull();
     expect(normalize({ queued: { item: 'hat', palette: 'mori', pattern: 'xx' } }, '2026-10-10').queued).toEqual({ item: 'hat', palette: 'mori' });
+  });
+});
+
+describe('1.1.0 までの記録の読み直し', () => {
+  it('なくなった色・模様は、近い物に読み替える', () => {
+    const d = normalize(
+      {
+        current: { id: 'a', item: 'muffler', palette: 'cafe', pattern: 'leaf', startTotal: 0, startedOn: '2026-10-01', best: 0 },
+        done: [{ id: 'b', item: 'hat', palette: 'ringo', pattern: 'heart', startTotal: 0, startedOn: '2026-10-01', best: 1, finishedOn: '2026-10-02' }],
+        queued: { item: 'hat', palette: 'mimoza' },
+      },
+      '2026-10-10',
+    );
+    expect(d.current?.palette).toBe('komugi');
+    expect(d.current?.pattern).toBe('tree');
+    expect(d.done[0].palette).toBe('akazukin');
+    expect(d.queued?.palette).toBe('mustard');
+  });
+  it('見た目のテーマは3つだけ。ほかはひだまり', () => {
+    expect(normalize({ theme: 'yoru' }, '2026-10-10').theme).toBe('yoru');
+    expect(normalize({ theme: 'yuki' }, '2026-10-10').theme).toBe('yuki');
+    expect(normalize({ theme: 'dark' }, '2026-10-10').theme).toBe('hidamari');
+    expect(normalize(null, '2026-10-10').theme).toBe('hidamari');
   });
 });

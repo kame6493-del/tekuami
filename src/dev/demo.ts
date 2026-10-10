@@ -20,6 +20,12 @@ function param(name: string): string | null {
   }
 }
 
+/** ?hour=21 で時刻を決め打ちにする(昼と夜の情景の確認用) */
+export function demoHour(): number | null {
+  const v = param('hour');
+  return v === null || v === '' ? null : Number(v);
+}
+
 export function demoMode(): string {
   return param('demo') ?? 'ready';
 }
@@ -52,6 +58,8 @@ export function seedData(today: string): AppData | null {
   d.days = demoDays(today);
   d.lastReadAt = Date.now();
   const cum = cumulativeSince(d.days, d.installDate, today);
+  const th = param('theme');
+  if (th === 'yoru' || th === 'yuki' || th === 'hidamari') d.theme = th;
   const seen = (p: Project, extra = 0) => stitchesFor(itemOf(p.item), p.best, p.rowSteps) - extra;
   if (seed === 'mid') {
     d.current = project('m1', 'muffler', 'ichigo', 'heart', cum - 1680, addDays(today, -1), 1680);
@@ -71,10 +79,10 @@ export function seedData(today: string): AppData | null {
     d.done = [
       project('b1', 'muffler', 'ichigo', 'heart', 0, addDays(today, -26), 18000, addDays(today, -23)),
       project('b2', 'muffler', 'sora', 'snow', 18000, addDays(today, -23), 18000, addDays(today, -20)),
-      project('b3', 'hat', 'mori', 'star', 36000, addDays(today, -20), 10000, addDays(today, -18)),
+      project('b3', 'hat', 'sora', 'snow', 36000, addDays(today, -20), 10000, addDays(today, -18)),
       project('b4', 'mitten', 'ichigo', 'snow', 46000, addDays(today, -18), 9500, addDays(today, -16)),
       project('b5', 'sock', 'sora', 'heart', 55500, addDays(today, -16), 11500, addDays(today, -14)),
-      project('b6', 'blanket', 'sora', 'nordic', 67000, addDays(today, -14), 14000, addDays(today, -9)),
+      project('b6', 'blanket', 'mori', 'mountain', 67000, addDays(today, -14), 14000, addDays(today, -9)),
     ];
     const cum2 = cumulativeSince(d.days, d.installDate, today);
     d.current = project('c1', 'hat', 'lavender', 'star', cum2 - 4300, addDays(today, -2), 4300);

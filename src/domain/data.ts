@@ -1,6 +1,6 @@
 import { ITEMS } from '../art/items';
-import { PATTERNS } from '../art/motifs';
-import { PALETTES } from '../art/yarns';
+import { PATTERN_ALIAS, PATTERNS } from '../art/motifs';
+import { PALETTE_ALIAS, PALETTES } from '../art/yarns';
 import { isDayKey } from './dates';
 import { DEFAULT_ROW_STEPS, ROW_STEPS_CHOICES, type Project } from './knit';
 import type { Days, SensorMark } from './steps';
@@ -30,7 +30,16 @@ export interface AppData {
   rowSteps: number;
   /** 編んでいる間に選んでおいた、次に編むもの */
   queued: Queued | null;
+  /** 見た目のテーマ */
+  theme: Theme;
 }
+
+export type Theme = 'hidamari' | 'yoru' | 'yuki';
+export const THEMES: readonly { id: Theme; name: string; sub: string }[] = [
+  { id: 'hidamari', name: 'ひだまり', sub: '(デフォルト)夜は窓の外が暗くなります' },
+  { id: 'yoru', name: 'よる', sub: 'いつも夜の窓辺' },
+  { id: 'yuki', name: 'ゆき', sub: '雪のふる白い窓辺' },
+];
 
 export interface Queued {
   item: string;
@@ -57,6 +66,7 @@ export function emptyData(today: string): AppData {
     seen: 0,
     rowSteps: DEFAULT_ROW_STEPS,
     queued: null,
+    theme: 'hidamari',
   };
 }
 
@@ -74,8 +84,10 @@ function cleanProject(x: unknown): Project | null {
   const p = x as Record<string, unknown>;
   if (typeof p.id !== 'string') return null;
   const item = ITEMS.some((i) => i.id === p.item) ? (p.item as string) : null;
-  const palette = PALETTES.some((i) => i.id === p.palette) ? (p.palette as string) : PALETTES[0].id;
-  const pattern = PATTERNS.some((i) => i.id === p.pattern) ? (p.pattern as string) : PATTERNS[0].id;
+  const pal0 = typeof p.palette === 'string' ? (PALETTE_ALIAS[p.palette] ?? p.palette) : '';
+  const pat0 = typeof p.pattern === 'string' ? (PATTERN_ALIAS[p.pattern] ?? p.pattern) : '';
+  const palette = PALETTES.some((i) => i.id === pal0) ? pal0 : PALETTES[0].id;
+  const pattern = PATTERNS.some((i) => i.id === pat0) ? pat0 : PATTERNS[0].id;
   if (!item) return null;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : 0);
   return {
@@ -116,12 +128,14 @@ export function normalize(raw: unknown, today: string): AppData {
     done: Array.isArray(r.done) ? r.done.map(cleanProject).filter((p): p is Project => !!p) : [],
     rowSteps: rowStepsOf(r.rowSteps),
     queued: cleanQueued(r.queued),
+    theme: r.theme === 'yoru' || r.theme === 'yuki' ? r.theme : 'hidamari',
   };
 }
 
 function cleanQueued(x: unknown): Queued | null {
   if (!x || typeof x !== 'object') return null;
   const q = x as Record<string, unknown>;
-  if (!ITEMS.some((i) => i.id === q.item) || !PALETTES.some((i) => i.id === q.palette)) return null;
-  return { item: q.item as string, palette: q.palette as string, ...(PATTERNS.some((i) => i.id === q.pattern) ? { pattern: q.pattern as string } : {}) };
+  const pal = typeof q.palette === 'string' ? (PALETTE_ALIAS[q.palette] ?? q.palette) : '';
+  if (!ITEMS.some((i) => i.id === q.item) || !PALETTES.some((i) => i.id === pal)) return null;
+  return { item: q.item as string, palette: pal, ...(PATTERNS.some((i) => i.id === q.pattern) ? { pattern: q.pattern as string } : {}) };
 }

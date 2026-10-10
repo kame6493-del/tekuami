@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ITEMS } from '../art/items';
-import { drawFabric, drawFinishedFit, drawLoops, drawNeedle, pieceOf, PITCH, type Piece } from '../art/knit';
-import type { ItemDef } from '../art/items';
-import { MOTIFS } from '../art/motifs';
+import { drawFabric, drawFinishedFit, drawLoops, drawNeedle, pieceOf } from '../art/knit';
 import { PATTERNS } from '../art/motifs';
 import { PALETTES } from '../art/yarns';
 
@@ -22,55 +20,9 @@ function Cv({ w, h, draw, bg = '#f6ecdc' }: { w: number; h: number; draw: (ctx: 
   return <canvas ref={ref} width={w} height={h} style={{ width: w / 2, height: h / 2 }} />;
 }
 
-/** アイコン(1024)。ハートの編み地が木の針に掛かっている。fg=1 は背景なし(Android の前景・起動画面) */
-function iconPiece(): Piece {
-  const W = 9;
-  const H = 9;
-  const item: ItemDef = { id: 'icon', name: '', short: '', pro: false, rows: Array.from({ length: H }, () => 'x'.repeat(W)), decor: 'none' };
-  const heart = MOTIFS.heart;
-  const stitches = Array.from({ length: H }, (_, r) =>
-    Array.from({ length: W }, (_, c) => {
-      const line = heart.length - r; // 下の段 r=1..7 に図案の下から
-      const mr = r >= 1 && r <= heart.length ? heart[line] : null;
-      const ch = mr && c >= 1 && c <= 7 ? mr[c - 1] : '.';
-      return { yarn: ch === 'o' ? ('strawberry' as const) : ('milk' as const), sunk: false };
-    }),
-  );
-  return { item, stitches, main: 'milk', sub: 'strawberry', accent: 'strawberry' };
-}
-
-function IconCanvas({ fg }: { fg: boolean }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const ctx = ref.current?.getContext('2d');
-    if (!ctx) return;
-    const N = 1024;
-    ctx.clearRect(0, 0, N, N);
-    if (!fg) {
-      const g = ctx.createRadialGradient(N * 0.45, N * 0.35, N * 0.1, N / 2, N / 2, N * 0.75);
-      g.addColorStop(0, '#fdf7ec');
-      g.addColorStop(1, '#f1e0c8');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, N, N);
-    }
-    const piece = iconPiece();
-    const k = fg ? 0.62 : 0.74;
-    const s = (N * k) / 9;
-    const fh = 9 * s * PITCH;
-    const x = (N - 9 * s) / 2;
-    const t = s * 0.36;
-    const needleY = (N - (fh + 2.1 * t)) / 2 + 1.4 * t;
-    drawFabric(ctx, piece, { x, y: needleY + t * 0.7, s, shadow: true });
-    drawNeedle(ctx, x - s * 0.9, x + 9 * s + s * 1.0, needleY, t);
-    drawLoops(ctx, piece, 8, () => true, x, needleY, s, t);
-  });
-  return <canvas id="icon" ref={ref} width={1024} height={1024} style={{ width: 1024, height: 1024 }} />;
-}
-
 export function ArtSheet() {
   const q = new URLSearchParams(location.search);
   const mode = q.get('art');
-  if (mode === 'icon') return <IconCanvas fg={q.get('fg') === '1'} />;
   if (mode === 'knit') {
     const s = Number(q.get('s') ?? 60);
     const pal = q.get('pal') ?? 'ichigo';

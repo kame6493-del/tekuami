@@ -2,6 +2,7 @@ import type { AppCtx } from '../App';
 import { addDays, fmt, labelJa, shortJa, weekdayJa } from '../domain/dates';
 import { progressOf } from '../domain/knit';
 import { historyRows, summarize } from '../domain/steps';
+import { Calendar } from './Calendar';
 import { PageHead, Ref } from './parts';
 
 const WD = ['月', '火', '水', '木', '金', '土', '日'];
@@ -81,6 +82,8 @@ export function Record({ ctx }: { ctx: AppCtx }) {
           ))}
         </figure>
       </section>
+
+      <Calendar ctx={ctx} />
 
       <dl className="stats3">
         <div>

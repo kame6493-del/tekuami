@@ -4,10 +4,12 @@ import { parseStepsCsv } from '../domain/csv';
 import { fmt, timeJa } from '../domain/dates';
 import { ROW_STEPS_CHOICES } from '../domain/knit';
 import { openHealthSettings, readerFor, sensorAvailableOnThisPlatform } from '../platform/health';
-import { platform, tap } from '../platform/native';
+import { THEMES } from '../domain/data';
+import { openUrl, platform, tap } from '../platform/native';
+import { RoomScene } from './Home';
 import { IconChevron, PageHead, Ref } from './parts';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 const STATE_TEXT: Record<string, string> = {
   checking: '確かめています',
@@ -50,19 +52,73 @@ function Row({ icon, label, sub, onClick }: { icon: string; label: string; sub?:
 
 const sourceName = () => (platform === 'android' ? 'ヘルスコネクト' : platform === 'ios' ? 'ヘルスケア' : 'ヘルスケア / ヘルスコネクト');
 
-/** 設定(見本11) */
+/** 設定(見本B・C 12・D)。下のタブから開く */
 export function Settings({ ctx }: { ctx: AppCtx }) {
+  const st = (ok: boolean) => (ok ? '連携中' : '未連携');
+  const ready = ctx.health === 'ready';
+  const theme = THEMES.find((t) => t.id === ctx.data.theme) ?? THEMES[0];
   return (
     <div className="page settings">
-      <PageHead title="設定" onBack={ctx.pop} />
+      <PageHead title="設定" />
+      <h2 className="set-sec">歩数の連携</h2>
       <ul className="set-list">
-        <Row icon="set_health" label="歩数データの取得" sub={`(${sourceName()})`} onClick={() => ctx.push({ name: 'source' })} />
-        <Row icon="set_steps" label="1段の歩数" sub={`(${fmt(ctx.data.rowSteps)}歩)`} onClick={() => ctx.push({ name: 'rowsteps' })} />
-        <Row icon="set_about" label="アプリについて" onClick={() => ctx.push({ name: 'about' })} />
-        <Row icon="set_write" label="データの書き込み" sub="しません(読み取りのみ)" onClick={() => ctx.push({ name: 'privacy' })} />
-        <Row icon="set_sound" label="音" sub="なし" />
-        <Row icon="set_ads" label="広告" sub="ありません" />
+        {platform !== 'android' && (
+          <li>
+            <button className="set-row" onClick={() => ctx.push({ name: 'source' })}>
+              <Ref name="icon_health" className="set-icon" />
+              <span className="set-text">
+                <span className="set-label">ヘルスケア</span>
+                <span className="set-sub">(読み取り専用)</span>
+              </span>
+              <span className={`set-state ${platform === 'ios' && ready ? 'is-on' : ''}`}>{platform === 'ios' ? st(ready) : st(ready)}</span>
+              <span className="set-chev">
+                <IconChevron />
+              </span>
+            </button>
+          </li>
+        )}
+        {platform !== 'ios' && (
+          <li>
+            <button className="set-row" onClick={() => ctx.push({ name: 'source' })}>
+              <Ref name="icon_hc" className="set-icon" />
+              <span className="set-text">
+                <span className="set-label">ヘルスコネクト</span>
+                <span className="set-sub">(読み取り専用)</span>
+              </span>
+              <span className={`set-state ${platform === 'android' && ready ? 'is-on' : ''}`}>{platform === 'android' ? st(ready) : '未連携'}</span>
+              <span className="set-chev">
+                <IconChevron />
+              </span>
+            </button>
+          </li>
+        )}
       </ul>
+      <ul className="set-list set-list-gap">
+        <Row icon="set_steps" label="1段の歩数" sub={`${fmt(ctx.data.rowSteps)}歩(変更できます)`} onClick={() => ctx.push({ name: 'rowsteps' })} />
+        <Row icon="set_about" label="見た目(テーマ)" sub={theme.name} onClick={() => ctx.push({ name: 'theme' })} />
+        <Row icon="set_write" label="データの扱い" sub="端末に保存されます・書き込みしません" onClick={() => ctx.push({ name: 'data' })} />
+        <Row icon="set_sound" label="お知らせ" sub="通知はありません" />
+      </ul>
+      <ul className="plain-list set-list-gap">
+        <LinkRow label="使い方" onClick={() => ctx.push({ name: 'howto' })} />
+        <LinkRow label="プライバシーポリシー" onClick={() => ctx.push({ name: 'privacy' })} />
+        <LinkRow label="お問い合わせ" onClick={() => ctx.push({ name: 'contact' })} />
+        <LinkRow label="このアプリについて" onClick={() => ctx.push({ name: 'about' })} />
+      </ul>
+      <div className="calm-card">
+        <div className="calm">
+          <Ref name="d_no_notice" className="calm-icon" />
+          <span>通知は ありません</span>
+        </div>
+        <div className="calm">
+          <Ref name="d_no_sound" className="calm-icon" />
+          <span>音は ありません</span>
+        </div>
+        <div className="calm">
+          <Ref name="set_ads" className="calm-icon" />
+          <span>広告は ありません</span>
+        </div>
+      </div>
       <div className="cat-card">
         <p>
           歩けない日があっても
@@ -72,6 +128,139 @@ export function Settings({ ctx }: { ctx: AppCtx }) {
           また、いつでも。
         </p>
         <Ref name="cat_card" className="cat-card-art" />
+      </div>
+    </div>
+  );
+}
+
+function LinkRow({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <li>
+      <button className="plain-row plain-link" onClick={onClick}>
+        <span className="plain-main">
+          <span className="plain-label">{label}</span>
+        </span>
+        <IconChevron />
+      </button>
+    </li>
+  );
+}
+
+/** 見た目(見本D 下段のテーマ3つ) */
+export function ThemePage({ ctx }: { ctx: AppCtx }) {
+  return (
+    <div className="page">
+      <PageHead title="見た目(テーマ)" onBack={ctx.pop} />
+      <ul className="theme-grid" role="radiogroup" aria-label="テーマ">
+        {THEMES.map((t) => (
+          <li key={t.id}>
+            <button
+              role="radio"
+              aria-checked={ctx.data.theme === t.id}
+              className={`theme-card ${ctx.data.theme === t.id ? 'is-on' : ''}`}
+              onClick={() => {
+                tap();
+                ctx.setTheme(t.id);
+              }}
+            >
+              <span className={`theme-thumb theme-thumb-${t.id}`} aria-hidden>
+                <RoomScene night={t.id === 'yoru'} theme={t.id} />
+              </span>
+              <span className="theme-name">{t.name}</span>
+              <span className="theme-sub">{t.sub}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="set-hint">ひだまり は、夕方6時から朝6時まで窓の外が夜になります。夜8時をすぎると、ホームに「今日はこれだけ編めました」が出ます。</p>
+    </div>
+  );
+}
+
+/** データの扱い */
+export function DataPage({ ctx }: { ctx: AppCtx }) {
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <div className="page">
+      <PageHead title="データの扱い" onBack={ctx.pop} />
+      <div className="doc">
+        <p>歩数・編みかけ・箱の中身は、この端末の中だけに保存します。外のサーバーへは送りません。アカウント登録もありません。</p>
+        <p>ヘルスケア・ヘルスコネクトからは歩数を読むだけで、書き込みはしません。</p>
+      </div>
+      <ul className="plain-list set-list-gap">
+        <LinkRow label="ほかのアプリの記録を読み込む" onClick={() => ctx.push({ name: 'source' })} />
+        <li className="plain-row">
+          <span className="plain-main">
+            <span className="plain-label">記録をすべて消す</span>
+            <span className="plain-sub">歩数・編みかけ・箱の中身が消えます</span>
+          </span>
+          {confirm ? (
+            <button className="btn btn-danger btn-s" onClick={ctx.resetAll}>
+              消す
+            </button>
+          ) : (
+            <button
+              className="btn btn-cream btn-s"
+              onClick={() => {
+                tap();
+                setConfirm(true);
+              }}
+            >
+              消す…
+            </button>
+          )}
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+/** 使い方 */
+export function HowtoPage({ ctx }: { ctx: AppCtx }) {
+  return (
+    <div className="page">
+      <PageHead title="使い方" onBack={ctx.pop} />
+      <ol className="howto">
+        <li>
+          <strong className="howto-h">歩くと編めます</strong>
+          <span>ヘルスケア(Android はヘルスコネクト)の歩数を読んで、1段 {fmt(ctx.data.rowSteps)}歩 で編み進めます。開くたびに読み直します。</span>
+        </li>
+        <li>
+          <strong className="howto-h">模様は編み上がるまで秘密</strong>
+          <span>最後の段まで編むと、何の模様だったか分かります。毛糸ぶくろがあれば、模様を自分で選べます。</span>
+        </li>
+        <li>
+          <strong className="howto-h">箱にしまう</strong>
+          <span>編み上がった物は「箱」にずっと残ります。「図鑑」で、集めた模様が見られます。</span>
+        </li>
+        <li>
+          <strong className="howto-h">余った歩数は持ち越し</strong>
+          <span>たくさん歩いた日の余りは、次に編む物へ持ち越します。編んだ段は減りません。</span>
+        </li>
+        <li>
+          <strong className="howto-h">ウィジェット</strong>
+          <span>ホーム画面・ロック画面に「次の段まで あと何歩」を置けます。ホーム画面を長押しして、てくあみのウィジェットを選んでください。</span>
+        </li>
+      </ol>
+    </div>
+  );
+}
+
+export const CONTACT_URL = 'https://github.com/kame6493-del/tekuami/issues';
+
+/** お問い合わせ */
+export function ContactPage({ ctx }: { ctx: AppCtx }) {
+  return (
+    <div className="page">
+      <PageHead title="お問い合わせ" onBack={ctx.pop} />
+      <div className="doc">
+        <p>ご意見・不具合のお知らせは、下のページから送れます(GitHub のアカウントが要ります)。</p>
+        <p>歩数が届かないときは、ホームの案内か、設定の「ヘルスケア」「ヘルスコネクト」から読み取りの許可を確かめてください。</p>
+      </div>
+      <div className="page-foot">
+        <button className="btn btn-primary" onClick={() => openUrl(CONTACT_URL)}>
+          お問い合わせのページを開く
+        </button>
       </div>
     </div>
   );
@@ -205,10 +394,9 @@ export function RowStepsPage({ ctx }: { ctx: AppCtx }) {
 
 /** アプリについて */
 export function About({ ctx }: { ctx: AppCtx }) {
-  const [confirm, setConfirm] = useState(false);
   return (
     <div className="page">
-      <PageHead title="アプリについて" onBack={ctx.pop} />
+      <PageHead title="このアプリについて" onBack={ctx.pop} />
       <ul className="plain-list">
         <li className="plain-row">
           <span className="plain-main">
@@ -232,27 +420,6 @@ export function About({ ctx }: { ctx: AppCtx }) {
             </span>
             <IconChevron />
           </button>
-        </li>
-        <li className="plain-row">
-          <span className="plain-main">
-            <span className="plain-label">記録をすべて消す</span>
-            <span className="plain-sub">歩数・編みかけ・箱の中身が消えます</span>
-          </span>
-          {confirm ? (
-            <button className="btn btn-danger btn-s" onClick={ctx.resetAll}>
-              消す
-            </button>
-          ) : (
-            <button
-              className="btn btn-cream btn-s"
-              onClick={() => {
-                tap();
-                setConfirm(true);
-              }}
-            >
-              消す…
-            </button>
-          )}
         </li>
       </ul>
       <p className="set-hint">広告なし・音なし・ログインなし。歩数と編んだ物は、この端末の中だけに残ります。</p>

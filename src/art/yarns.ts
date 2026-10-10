@@ -1,33 +1,43 @@
 /**
- * 毛糸の色。見本の毛糸玉から1色ずつ取った地の色に、編み目の奥・影・光の3段を足して4段にする。
+ * 毛糸の色。見本D の毛糸玉から1色ずつ取った地の色に、編み目の奥・影・光の3段を足して4段にする。
  */
 export type Shades = readonly [gap: string, shadow: string, base: string, hi: string];
 
 export const YARN_BASE = {
-  strawberry: '#d97b80',
-  milkpink: '#ecbdb6',
-  milk: '#f3e3cd',
-  sky: '#6e8fc0',
-  mist: '#aebdd3',
-  snow: '#f2e8d9',
-  moss: '#66714a',
-  olive: '#9c936f',
-  sage: '#e1dbc0',
-  lavender: '#a386b5',
-  lilac: '#cfbdd9',
-  lace: '#efe5da',
-  cocoa: '#8d6450',
-  latte: '#b8977c',
-  oat: '#eedac3',
-  navy: '#3e4b6c',
-  dusk: '#838a9e',
-  silver: '#d4cbc0',
-  apple: '#c1443c',
-  apricot: '#d68a65',
-  caramel: '#e9c094',
-  mimosa: '#e0a64e',
-  cream: '#f5ebd5',
-  pistachio: '#c9cfa6',
+  cream: '#f5ead6',
+  snow: '#f7f2ea',
+  peach: '#eba27a',
+  peachDeep: '#cf7a52',
+  ichigo: '#d65750',
+  ichigoDeep: '#a83a35',
+  moss: '#5f7350',
+  mossLight: '#9ba580',
+  sky: '#86b6d4',
+  skyDeep: '#5f8fb0',
+  beige: '#dcc3a6',
+  lilac: '#c9b0d4',
+  lavender: '#8f6f9a',
+  wheat: '#e0bd95',
+  wheatDeep: '#a9713f',
+  charcoal: '#3b332d',
+  gray: '#a89c92',
+  sakura: '#f2a7a0',
+  sakuraDeep: '#d47460',
+  willow: '#cdb59c',
+  willowDeep: '#8a6a52',
+  mustard: '#e3a142',
+  mustardDeep: '#b06c1c',
+  akazukin: '#c43a33',
+  akazukinDeep: '#8a2420',
+  yomogi: '#a5a67c',
+  yomogiDeep: '#596040',
+  aoumi: '#3f76a6',
+  aoumiDeep: '#2c4b6c',
+  kuri: '#8d5536',
+  kuriDeep: '#5a321e',
+  navy: '#3c4560',
+  navyDeep: '#262a36',
+  silver: '#d6cfc6',
   bark: '#4d362b',
 } as const;
 
@@ -63,20 +73,32 @@ export interface Palette {
   pro: boolean;
 }
 
-/** 見本の8組。名前も見本どおり。毛糸ぶくろで開くのは 夜空・りんご・ミモザ */
+/** 見本D の16色。基本の8色は無料、毛糸ぶくろで8色増える */
 export const PALETTES: readonly Palette[] = [
-  { id: 'ichigo', name: 'いちごみるく', main: 'milk', sub: 'strawberry', accent: 'strawberry', pro: false },
-  { id: 'sora', name: '空と雪', main: 'sky', sub: 'snow', accent: 'mist', pro: false },
-  { id: 'mori', name: '森のこもれび', main: 'moss', sub: 'sage', accent: 'olive', pro: false },
-  { id: 'lavender', name: 'ラベンダー', main: 'lilac', sub: 'lace', accent: 'lavender', pro: false },
-  { id: 'cafe', name: 'カフェオレ', main: 'latte', sub: 'oat', accent: 'cocoa', pro: false },
-  { id: 'yozora', name: '夜空', main: 'navy', sub: 'silver', accent: 'dusk', pro: true },
-  { id: 'ringo', name: 'りんご', main: 'apple', sub: 'caramel', accent: 'apricot', pro: true },
-  { id: 'mimoza', name: 'ミモザ', main: 'mimosa', sub: 'cream', accent: 'pistachio', pro: true },
+  { id: 'milk', name: 'ミルク', main: 'cream', sub: 'peach', accent: 'peachDeep', pro: false },
+  { id: 'ichigo', name: 'いちご', main: 'cream', sub: 'ichigo', accent: 'ichigoDeep', pro: false },
+  { id: 'mori', name: 'もり', main: 'moss', sub: 'cream', accent: 'mossLight', pro: false },
+  { id: 'sora', name: 'そら', main: 'cream', sub: 'skyDeep', accent: 'sky', pro: false },
+  { id: 'yuki', name: 'ゆき', main: 'snow', sub: 'beige', accent: 'beige', pro: false },
+  { id: 'lavender', name: 'ラベンダー', main: 'cream', sub: 'lavender', accent: 'lilac', pro: false },
+  { id: 'komugi', name: 'こむぎ', main: 'cream', sub: 'wheatDeep', accent: 'wheat', pro: false },
+  { id: 'sumi', name: 'すみ', main: 'charcoal', sub: 'cream', accent: 'gray', pro: false },
+  { id: 'sakuramochi', name: 'さくらもち', main: 'cream', sub: 'sakuraDeep', accent: 'sakura', pro: true },
+  { id: 'nekoyanagi', name: 'ねこやなぎ', main: 'willow', sub: 'cream', accent: 'willowDeep', pro: true },
+  { id: 'mustard', name: 'マスタード', main: 'cream', sub: 'mustard', accent: 'mustardDeep', pro: true },
+  { id: 'akazukin', name: 'あかずきん', main: 'akazukin', sub: 'cream', accent: 'akazukinDeep', pro: true },
+  { id: 'yomogi', name: 'よもぎ', main: 'yomogi', sub: 'cream', accent: 'yomogiDeep', pro: true },
+  { id: 'aoumi', name: 'あおうみ', main: 'aoumi', sub: 'cream', accent: 'aoumiDeep', pro: true },
+  { id: 'kuri', name: 'くり', main: 'kuri', sub: 'cream', accent: 'kuriDeep', pro: true },
+  { id: 'yozora', name: 'よぞら', main: 'navy', sub: 'silver', accent: 'navyDeep', pro: true },
 ];
 
+/** 1.1.0 までの色の名前 → 1.2.0 の色(保存された記録を読み直すとき) */
+export const PALETTE_ALIAS: Record<string, string> = { cafe: 'komugi', ringo: 'akazukin', mimoza: 'mustard' };
+
 export function paletteOf(id: string): Palette {
-  return PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+  const k = PALETTE_ALIAS[id] ?? id;
+  return PALETTES.find((p) => p.id === k) ?? PALETTES[0];
 }
 
 /** 編み針(木) */

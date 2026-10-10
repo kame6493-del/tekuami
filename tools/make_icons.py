@@ -1,35 +1,42 @@
-"""アイコン・起動画面を書き出す。原画は work/shots/icon_1024.png(背景つき)と icon_fg_1024.png(背景なし)。
-1.1.0 から: 針に掛かったハートの編み地(アプリの編み目と同じ描き方)。先に python tools/shot_icon.py を流す。"""
+"""アイコン・起動画面を書き出す(1.2.0)。原画は見本C 15 のアイコン(毛糸玉と編み棒)を切り出した物。
+切り抜きの縁は丸い角と地が混じるので、少し縮めて同じ桃色の地に置き、縁をぼかしてなじませる。
+python tools/make_icons.py"""
 import os
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, '..')
-SHOTS = os.path.join(ROOT, 'work', 'shots')
-BG = (0xFB, 0xF3, 0xE6)
+SRC = os.path.join(os.path.expanduser('~'), 'Downloads', '編み物歩数計「てくあみ」UI提案ボード-3.png')
+BG = (250, 223, 204)
 
-full = Image.open(os.path.join(SHOTS, 'icon_1024.png')).convert('RGB')
-fg = Image.open(os.path.join(SHOTS, 'icon_fg_1024.png')).convert('RGBA')
-
-
-def resized(im, size):
-    return im.resize((size, size), Image.LANCZOS)
+src = Image.open(SRC).convert('RGB')
+c = src.crop((1087 + 3, 922 + 3, 1164 - 3, 998 - 3))
 
 
-# ストア
+def icon(size, k=0.9):
+    """size 四方。中に k の大きさで原画を置き、縁 8% をぼかす"""
+    canvas = Image.new('RGB', (size, size), BG)
+    n = int(size * k)
+    im = c.resize((n, n), Image.LANCZOS)
+    mask = Image.new('L', (n, n), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, n - 1, n - 1), int(n * 0.16), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(n * 0.08))
+    canvas.paste(im, ((size - n) // 2, (size - n) // 2), mask)
+    return canvas
+
+
+full = icon(1024)
 os.makedirs(os.path.join(ROOT, 'store', 'play'), exist_ok=True)
 full.save(os.path.join(ROOT, 'store', 'icon_1024.png'))
-resized(full, 512).save(os.path.join(ROOT, 'store', 'play', 'icon_512.png'))
-
-# iOS(アルファ無しの 1024)
-ios_icon = os.path.join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png')
-full.save(ios_icon)
+full.resize((512, 512), Image.LANCZOS).save(os.path.join(ROOT, 'store', 'play', 'icon_512.png'))
+full.save(os.path.join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png'))
 
 # iOS の起動画面(2732 四方、真ん中に小さく)
 splash = Image.new('RGB', (2732, 2732), BG)
-mark = fg.resize((560, 560), Image.LANCZOS)
-splash.paste(mark, ((2732 - 560) // 2, (2732 - 560) // 2), mark)
+mark = icon(640, 0.98)
+splash.paste(mark, ((2732 - 640) // 2, (2732 - 640) // 2))
 for n in ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']:
     splash.save(os.path.join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets', 'Splash.imageset', n))
 
@@ -38,27 +45,19 @@ RES = os.path.join(ROOT, 'android', 'app', 'src', 'main', 'res')
 dens = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 for d, k in dens.items():
     legacy = round(48 * k)
-    resized(full, legacy).save(os.path.join(RES, f'mipmap-{d}', 'ic_launcher.png'))
-    # 丸いアイコン: 円の外を背景色で埋めずに透明に
-    r = resized(full, legacy).convert('RGBA')
-    mask = Image.new('L', (legacy * 4, legacy * 4), 0)
-    from PIL import ImageDraw
-
-    ImageDraw.Draw(mask).ellipse((0, 0, legacy * 4 - 1, legacy * 4 - 1), fill=255)
-    r.putalpha(mask.resize((legacy, legacy), Image.LANCZOS))
+    full.resize((legacy, legacy), Image.LANCZOS).save(os.path.join(RES, f'mipmap-{d}', 'ic_launcher.png'))
+    r = full.resize((legacy, legacy), Image.LANCZOS).convert('RGBA')
+    m = Image.new('L', (legacy * 4, legacy * 4), 0)
+    ImageDraw.Draw(m).ellipse((0, 0, legacy * 4 - 1, legacy * 4 - 1), fill=255)
+    r.putalpha(m.resize((legacy, legacy), Image.LANCZOS))
     r.save(os.path.join(RES, f'mipmap-{d}', 'ic_launcher_round.png'))
-    # アダプティブの前景: 108dp の中央 66%(72dp)に収める
+    # アダプティブの前景: 108dp いっぱいに置く(地と同じ色なので、どの形に切られても毛糸玉は真ん中に残る)
     size = round(108 * k)
-    inner = round(72 * k)
-    canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    f = resized(fg, inner)
-    canvas.paste(f, ((size - inner) // 2, (size - inner) // 2), f)
-    canvas.save(os.path.join(RES, f'mipmap-{d}', 'ic_launcher_foreground.png'))
+    icon(size, 0.72).save(os.path.join(RES, f'mipmap-{d}', 'ic_launcher_foreground.png'))
 
 with open(os.path.join(RES, 'values', 'ic_launcher_background.xml'), 'w', encoding='utf-8', newline='\n') as fh:
-    fh.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#FBF3E6</color>\n</resources>\n')
+    fh.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#FADFCC</color>\n</resources>\n')
 
-# Android の起動画面(縦横とも、真ん中に小さく)
 for folder in os.listdir(RES):
     if not folder.startswith('drawable'):
         continue
@@ -68,7 +67,6 @@ for folder in os.listdir(RES):
     w, h = Image.open(p).size
     s = Image.new('RGB', (w, h), BG)
     m = min(w, h) // 3
-    mk = fg.resize((m, m), Image.LANCZOS)
-    s.paste(mk, ((w - m) // 2, (h - m) // 2), mk)
+    s.paste(icon(m, 0.98), ((w - m) // 2, (h - m) // 2))
     s.save(p)
-print('icons ok')
+print('icons ok', np.array(full).shape)

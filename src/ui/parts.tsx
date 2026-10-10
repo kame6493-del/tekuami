@@ -71,7 +71,7 @@ export function KnitStage({ item, palette, pattern, stitches, label }: { item: s
         const it = piece.item;
         const Wc = widthOf(it);
         const H = heightOf(it);
-        const s = Math.min((w * 0.62) / Wc, 30 * dpr);
+        const s = Math.min((w * 0.46) / Wc, 26 * dpr);
         const p = s * PITCH;
         const fw = Wc * s;
         const x = (w - fw) / 2;
@@ -203,6 +203,79 @@ export function IconSparkle({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" width={22} height={22} aria-hidden>
       <path d="M12 2 C13 9 15 11 22 12 C15 13 13 15 12 22 C11 15 9 13 2 12 C9 11 11 9 12 2 Z" fill="#f2c14e" />
+    </svg>
+  );
+}
+
+/** 段の数(stitches 目まで編めたとき、編み上がった段の数) */
+export function rowsDoneOf(item: string, stitches: number): number {
+  const it = pieceOf(item, 'milk', 'heart').item;
+  let r = 0;
+  let left = stitches;
+  while (r < heightOf(it) && left >= orderOf(it, r).length) {
+    left -= orderOf(it, r).length;
+    r++;
+  }
+  return r;
+}
+
+/**
+ * 今日編めた分だけを横長の帯にして見せる(見本B「1日の終わり」)。新しい段が右。
+ * from〜to は目の数。
+ */
+export function KnitStrip({ item, palette, pattern, from, to, label }: { item: string; palette: string; pattern: string; from: number; to: number; label: string }) {
+  return (
+    <FillCanvas
+      className="strip"
+      label={label}
+      deps={[item, palette, pattern, from, to]}
+      draw={(ctx, w, h) => {
+        const piece = pieceOf(item, palette, pattern);
+        const it = piece.item;
+        const Wc = widthOf(it);
+        const H = heightOf(it);
+        const r0 = Math.min(rowsDoneOf(item, from), H - 1);
+        const r1 = Math.min(H, Math.max(r0 + 1, rowsDoneOf(item, to) + (to > from ? 1 : 0)));
+        const n = Math.max(1, r1 - r0);
+        // 回したあと: 横 = 段の数、縦 = 目の数
+        const s = Math.min((w * 0.94) / (n * PITCH + 0.4), (h * 0.9) / Wc);
+        const p = s * PITCH;
+        ctx.save();
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(Math.PI / 2);
+        // 段 r0..r1 の帯の真ん中を原点に
+        const bandTop = (H - r1) * p; // 一番上の段 r1-1 の上端(y0=0 のとき)
+        const bandH = n * p;
+        const y0 = -(bandTop + bandH / 2);
+        const x0 = -(Wc * s) / 2;
+        ctx.beginPath();
+        ctx.rect(x0 - s, -bandH / 2 - p * 0.15, Wc * s + 2 * s, bandH + p * 0.3);
+        ctx.clip();
+        drawFabric(ctx, piece, { x: x0, y: y0, s, stitchesDone: to });
+        ctx.restore();
+      }}
+    />
+  );
+}
+
+/** 木の棒(見本B・C の、編み地を掛ける棒) */
+export function WoodBar({ className }: { className?: string }) {
+  return (
+    <span className={`woodbar ${className ?? ''}`} aria-hidden>
+      <span className="woodbar-knob" />
+      <span className="woodbar-knob" />
+    </span>
+  );
+}
+
+/** 円の進み具合(見本D の細い弧)。吹き出しの縁の下半分を、左から右へ。frac は 0〜1 */
+export function Arc({ frac, className }: { frac: number; className?: string }) {
+  const f = Math.max(0, Math.min(1, frac));
+  const L = Math.PI * 47; // 半周
+  return (
+    <svg className={`arc ${className ?? ''}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+      <path d="M3 50 A47 47 0 0 0 97 50" fill="none" stroke="var(--arc-bg)" strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <path d="M3 50 A47 47 0 0 0 97 50" fill="none" stroke="var(--arc)" strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" pathLength={L} strokeDasharray={`${L * f} ${L}`} />
     </svg>
   );
 }

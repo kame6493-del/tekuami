@@ -1,7 +1,8 @@
 """cap add ios の後に流す設定(何度流しても同じ結果)。
 - 表示名・日本語・縦向きだけ・iPhone だけ
 - ヘルスケアの読み取りの説明文(日本語)と HealthKit の entitlements
-- 版 1.0.0
+- 版 1.2.0
+- Main.storyboard の画面を MainViewController(ウィジェットの橋を登録する)にする
 """
 import os
 import re
@@ -25,17 +26,23 @@ pl['ITSAppUsesNonExemptEncryption'] = False
 with open(plist_path, 'wb') as f:
     plistlib.dump(pl, f)
 
-ent = {'com.apple.developer.healthkit': True, 'com.apple.developer.healthkit.access': []}
+# 1.2.0: ウィジェットと歩数を受け渡す App Group を足した
+ent = {'com.apple.developer.healthkit': True, 'com.apple.developer.healthkit.access': [], 'com.apple.security.application-groups': ['group.jp.tekuami.app']}
 with open(os.path.join(APP, 'App', 'App.entitlements'), 'wb') as f:
     plistlib.dump(ent, f)
 
 pbx_path = os.path.join(APP, 'App.xcodeproj', 'project.pbxproj')
 s = open(pbx_path, encoding='utf-8').read()
 s = s.replace('TARGETED_DEVICE_FAMILY = "1,2";', 'TARGETED_DEVICE_FAMILY = 1;')
-s = re.sub(r'MARKETING_VERSION = [0-9.]+;', 'MARKETING_VERSION = 1.1.0;', s)
+s = re.sub(r'MARKETING_VERSION = [0-9.]+;', 'MARKETING_VERSION = 1.2.0;', s)
 if 'CODE_SIGN_ENTITLEMENTS' not in s:
     s = s.replace('INFOPLIST_FILE = App/Info.plist;', 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tINFOPLIST_FILE = App/Info.plist;')
 open(pbx_path, 'w', encoding='utf-8', newline='\n').write(s)
+
+sb_path = os.path.join(APP, 'App', 'Base.lproj', 'Main.storyboard')
+sb = open(sb_path, encoding='utf-8').read()
+sb = sb.replace('customClass="CAPBridgeViewController" customModule="Capacitor"', 'customClass="MainViewController" customModule="App" customModuleProvider="target"')
+open(sb_path, 'w', encoding='utf-8', newline=chr(10)).write(sb)
 
 export = {
     'method': 'app-store-connect',

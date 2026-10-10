@@ -11,6 +11,10 @@ export interface ItemDef {
   name: string;
   /** 箱の絞り込みの名前 */
   short: string;
+  /** 作品の詳細に出す大きさ */
+  size: string;
+  /** 作品の詳細の一言 */
+  note: string;
   pro: boolean;
   /** 上から下へ */
   rows: readonly string[];
@@ -104,12 +108,12 @@ const BLANKET = [
 ];
 
 export const ITEMS: readonly ItemDef[] = [
-  { id: 'muffler', name: 'マフラー', short: 'マフラー', pro: false, rows: MUFFLER, decor: 'fringe' },
-  { id: 'hat', name: 'ニット帽', short: 'ぼうし', pro: false, rows: HAT, decor: 'pompom', span: [1, 15] },
-  { id: 'mitten', name: 'ミトン', short: 'ミトン', pro: false, rows: MITTEN, decor: 'none', span: [3, 12] },
-  { id: 'sock', name: 'くつした', short: 'くつした', pro: false, rows: SOCK, decor: 'none', span: [1, 8] },
-  { id: 'sweater', name: 'セーター', short: 'セーター', pro: true, rows: SWEATER, decor: 'none', span: [7, 21] },
-  { id: 'blanket', name: 'ひざかけ', short: 'ひざかけ', pro: true, rows: BLANKET, decor: 'fringe', span: [1, 21] },
+  { id: 'muffler', name: 'マフラー', short: 'マフラー', size: '約150cm', note: 'ふんわりあたたかなマフラーができました。たくさん歩いた証です。', pro: false, rows: MUFFLER, decor: 'fringe' },
+  { id: 'hat', name: 'ニット帽', short: 'ぼうし', size: '頭まわり 約54cm', note: 'ぽんぽんのついたニット帽ができました。寒い朝のおさんぽに。', pro: false, rows: HAT, decor: 'pompom', span: [1, 15] },
+  { id: 'mitten', name: 'ミトン', short: 'ミトン', size: '約24cm', note: '両手ぶんのミトンができました。ひとつずつ、歩いて編んだ手袋です。', pro: false, rows: MITTEN, decor: 'none', span: [3, 12] },
+  { id: 'sock', name: 'くつした', short: 'くつした', size: '約23cm', note: 'あったかいくつしたができました。足もとから、ほっとひと息。', pro: true, rows: SOCK, decor: 'none', span: [1, 8] },
+  { id: 'sweater', name: 'セーター', short: 'セーター', size: '身幅 約52cm', note: 'たくさん歩いて、セーターが編み上がりました。よくがんばりました。', pro: true, rows: SWEATER, decor: 'none', span: [7, 21] },
+  { id: 'blanket', name: 'ひざかけ', short: 'ひざかけ', size: '約70×100cm', note: '大きなひざかけができました。ここまで歩いた日々がつまっています。', pro: true, rows: BLANKET, decor: 'fringe', span: [1, 21] },
 ];
 
 export function itemOf(id: string): ItemDef {
