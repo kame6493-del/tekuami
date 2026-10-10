@@ -1,16 +1,12 @@
 /**
- * 模様。編み込みの図案と同じで、1文字が編み目1つ。横に繰り返して並べる。
- *  . = 地の色  o = 模様の色  * = 差し色
+ * 模様。編み込みの図案と同じで、1文字が編み目1つ。
+ *  . = 地の色  o = 模様の色  * = 差し色  # = 濃い茶(目・鼻)
  * どれも手で1マスずつ置いた。右端の1列は次の模様との間(空き)。
  */
-export interface Motif {
-  id: string;
-  rows: readonly string[];
-}
-
 export const MOTIFS = {
   heart: [
     '.oo.oo..',
+    'ooooooo.',
     'ooooooo.',
     'ooooooo.',
     '.ooooo..',
@@ -28,14 +24,49 @@ export const MOTIFS = {
     '.o..o..o..',
     '....o.....',
   ],
-  tree: [
-    '...o....',
-    '..ooo...',
-    '...o....',
-    '..ooo...',
-    '.ooooo..',
-    'ooooooo.',
-    '...*....',
+  star: [
+    '....o.....',
+    '...ooo....',
+    'ooooooooo.',
+    '.ooooooo..',
+    '..ooooo...',
+    '..oo.oo...',
+    '.oo...oo..',
+  ],
+  leaf: [
+    '....o.....',
+    '...ooo....',
+    '.o..o..o..',
+    'oo..o..oo.',
+    'ooo.o.ooo.',
+    '.ooooooo..',
+    '....o.....',
+    '.o..o..o..',
+    'oo..o..oo.',
+    'ooo.o.ooo.',
+    '.ooooooo..',
+    '....o.....',
+  ],
+  dog: [
+    '.oo....oo..',
+    'oooooooooo.',
+    'oooooooooo.',
+    'oo#oooo#oo.',
+    'oooooooooo.',
+    'ooo.##.ooo.',
+    '.oo....oo..',
+    '..oooooo...',
+  ],
+  nordic: [
+    'o..o..',
+    '......',
+    '..o...',
+    '.o*o..',
+    'o***o.',
+    '.o*o..',
+    '..o...',
+    '......',
+    'o..o..',
   ],
   zigzag: [
     'o...',
@@ -54,50 +85,6 @@ export const MOTIFS = {
     '..o.',
     '....',
   ],
-  cat: [
-    '.o.....o..',
-    '.oo...oo..',
-    '.ooooooo..',
-    '.o*ooo*o..',
-    '.ooo*ooo..',
-    '..ooooo...',
-  ],
-  diamond: [
-    '...o....',
-    '..o*o...',
-    '.o***o..',
-    'o*****o.',
-    '.o***o..',
-    '..o*o...',
-    '...o....',
-  ],
-  star: [
-    '..o...o...',
-    '..oo.oo...',
-    'oooo.oooo.',
-    '.ooo.ooo..',
-    '....*.....',
-    '.ooo.ooo..',
-    'oooo.oooo.',
-    '..oo.oo...',
-    '..o...o...',
-  ],
-  wave: [
-    '.oo.....',
-    'o..o....',
-    '....o..o',
-    '.....oo.',
-  ],
-  acorn: [
-    '....*....',
-    '..ooooo..',
-    '.ooooooo.',
-    '.*******.',
-    '.*******.',
-    '..*****..',
-    '...***...',
-    '....*....',
-  ],
   cross: [
     '.o.',
     'ooo',
@@ -111,6 +98,7 @@ export type MotifId = keyof typeof MOTIFS;
 /**
  * 模様の組。大きい模様1つと、間に入る細い帯1つ。
  * 名前は編み上がったときに初めて出す(何の模様かは編むまで秘密)。
+ * repeat=true は横に繰り返す模様(北欧風)。
  */
 export interface Pattern {
   id: string;
@@ -118,21 +106,17 @@ export interface Pattern {
   big: MotifId;
   band: MotifId;
   pro: boolean;
+  repeat?: boolean;
 }
 
+/** 見本の6種。無料は ハート・雪の結晶・星、毛糸ぶくろで 木の葉・いぬ・北欧風 */
 export const PATTERNS: readonly Pattern[] = [
   { id: 'heart', name: 'ハート', big: 'heart', band: 'dots', pro: false },
   { id: 'snow', name: '雪の結晶', big: 'snow', band: 'zigzag', pro: false },
-  { id: 'tree', name: 'もみの木', big: 'tree', band: 'dots', pro: false },
-  { id: 'zigzag', name: 'ぎざぎざ', big: 'zigzag', band: 'check', pro: false },
-  { id: 'check', name: '市松', big: 'check', band: 'zigzag', pro: false },
-  { id: 'dots', name: '水玉', big: 'dots', band: 'cross', pro: false },
-  { id: 'cat', name: 'ねこ', big: 'cat', band: 'dots', pro: true },
-  { id: 'diamond', name: 'ひし形', big: 'diamond', band: 'zigzag', pro: true },
-  { id: 'star', name: '北欧の星', big: 'star', band: 'cross', pro: true },
-  { id: 'wave', name: 'なみ', big: 'wave', band: 'dots', pro: true },
-  { id: 'acorn', name: 'どんぐり', big: 'acorn', band: 'check', pro: true },
-  { id: 'cross', name: '十字', big: 'cross', band: 'zigzag', pro: true },
+  { id: 'star', name: '星', big: 'star', band: 'cross', pro: false },
+  { id: 'leaf', name: '木の葉', big: 'leaf', band: 'dots', pro: true },
+  { id: 'dog', name: 'いぬ', big: 'dog', band: 'check', pro: true },
+  { id: 'nordic', name: '北欧風', big: 'nordic', band: 'zigzag', pro: true, repeat: true },
 ];
 
 /** 選ぶ画面の見本用。模様を入れず地の色だけで描く(本番の模様は編むまで見せない) */

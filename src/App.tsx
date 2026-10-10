@@ -1,26 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dayKey } from './domain/dates';
-import { emptyData, type AppData, type Source } from './domain/data';
-import { advance, finish, newProject, nextPattern, progressOf, type Project } from './domain/knit';
+import { emptyData, type AppData, type Queued, type Source } from './domain/data';
+import { advance, canUseItem, finish, newProject, nextPattern, progressOf, type Project } from './domain/knit';
 import { addDaysTo, cumulativeSince, mergeDays, type Days } from './domain/steps';
 import { seedData } from './dev/demo';
 import { loadBilling, type BillingState } from './platform/billing';
 import { readerFor, type HealthState } from './platform/health';
 import { isNative, onBack, onResume, success, tap } from './platform/native';
 import { clearData, loadData, saveData } from './platform/storage';
+import { Bag } from './ui/Bag';
 import { Box } from './ui/Box';
+import { Colors } from './ui/Colors';
+import { Finished } from './ui/Finished';
 import { Home } from './ui/Home';
-import { Intro } from './ui/Intro';
-import { Log } from './ui/Log';
-import { NextSheet } from './ui/NextSheet';
-import { Paywall } from './ui/Paywall';
-import { PieceSheet } from './ui/PieceSheet';
-import { Privacy } from './ui/Privacy';
-import { Settings } from './ui/Settings';
-import { Sheet } from './ui/Sheet';
+import { Pick } from './ui/Pick';
+import { PatternPage } from './ui/PatternPage';
+import { PieceView } from './ui/PieceView';
+import { Record } from './ui/Record';
+import { About, Privacy, RowStepsPage, Settings, SourcePage } from './ui/Settings';
+import { ShareView } from './ui/ShareView';
+import { Splash } from './ui/Splash';
 import { TabBar, type Tab } from './ui/TabBar';
 
-export type SheetKind = { kind: 'settings' } | { kind: 'paywall'; from?: SheetKind } | { kind: 'next' } | { kind: 'piece'; id: string } | { kind: 'privacy' };
+/** 上に重ねて開く画面。戻る矢印で1つずつ閉じる */
+export type Route =
+  | { name: 'record' }
+  | { name: 'settings' }
+  | { name: 'source' }
+  | { name: 'rowsteps' }
+  | { name: 'about' }
+  | { name: 'privacy' }
+  | { name: 'pattern'; item: string }
+  | { name: 'colors'; item: string; pattern?: string }
+  | { name: 'share'; id?: string }
+  | { name: 'piece'; id: string }
+  | { name: 'bag' };
 
 export interface AppCtx {
   data: AppData;
@@ -35,18 +49,42 @@ export interface AppCtx {
   refresh: () => Promise<void>;
   connect: () => Promise<void>;
   useSource: (s: Source) => Promise<void>;
-  startProject: (args: { item: string; palette: string; pattern?: string }) => void;
+  /** 編みはじめる。編んでいる物があるときは「次に編むもの」として取っておく */
+  choose: (q: Queued) => void;
   finishCurrent: () => void;
   markSeen: (n: number) => void;
   importDays: (days: Days) => void;
+  setRowSteps: (n: number) => void;
   setBilling: (b: BillingState) => void;
-  open: (s: SheetKind) => void;
-  close: () => void;
+  push: (r: Route) => void;
+  pop: () => void;
+  goTab: (t: Tab) => void;
   toast: (msg: string) => void;
   resetAll: () => Promise<void>;
 }
 
 const todayKey = () => dayKey(new Date());
+
+/** ブラウザでの確認用: ?tab=box や ?route=record,settings で画面を直接開く(端末のアプリでは使わない) */
+function devParam(name: string): string | null {
+  try {
+    return new URLSearchParams(location.search).get(name);
+  } catch {
+    return null;
+  }
+}
+function devRoutes(): Route[] {
+  const r = devParam('route');
+  if (!r) return [];
+  return r.split(',').map((x) => {
+    const [name, a, b] = x.split(':');
+    if (name === 'pattern') return { name, item: a || 'muffler' } as Route;
+    if (name === 'colors') return { name, item: a || 'muffler', ...(b ? { pattern: b } : {}) } as Route;
+    if (name === 'piece') return { name, id: a } as Route;
+    if (name === 'share') return { name, ...(a ? { id: a } : {}) } as Route;
+    return { name } as Route;
+  });
+}
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
@@ -54,8 +92,8 @@ export default function App() {
   const [billing, setBilling] = useState<BillingState>({ status: 'unavailable', reason: '読み込み中', pro: false });
   const [health, setHealth] = useState<HealthState | 'checking'>('checking');
   const [reading, setReading] = useState(false);
-  const [tab, setTab] = useState<Tab>('knit');
-  const [sheet, setSheet] = useState<SheetKind | null>(null);
+  const [tab, setTab] = useState<Tab>(() => (!isNative ? (devParam('tab') as Tab | null) : null) ?? 'home');
+  const [stack, setStack] = useState<Route[]>(() => (!isNative ? devRoutes() : []));
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const dataRef = useRef<AppData | null>(null);
   dataRef.current = data;
@@ -150,19 +188,37 @@ export default function App() {
   const cumulative = data ? cumulativeSince(data.days, data.installDate, today) : 0;
   const pro = billing.pro;
 
-  const startProject = useCallback(
-    (args: { item: string; palette: string; pattern?: string }) => {
-      const d = dataRef.current;
-      if (!d) return;
+  /** 新しく編みはじめた物(余りの歩数から) */
+  const startFrom = useCallback(
+    (d: AppData, q: Queued): AppData => {
       const t = todayKey();
       const cum = cumulativeSince(d.days, d.installDate, t);
-      const pat = nextPattern(d.done, pro, args.pattern);
-      const p: Project = advance(newProject({ item: args.item, palette: args.palette, pattern: pat.id, startTotal: d.carry ?? cum, today: t }), cum);
-      commit({ ...d, onboarded: true, current: p, carry: null, seen: 0 });
-      setSheet(null);
-      setTab('knit');
+      const pat = nextPattern(d.done, pro, q.pattern);
+      const p: Project = advance(newProject({ item: q.item, palette: q.palette, pattern: pat.id, startTotal: d.carry ?? cum, today: t, rowSteps: d.rowSteps }), cum);
+      return { ...d, onboarded: true, current: p, carry: null, seen: 0, queued: null };
     },
-    [commit, pro],
+    [pro],
+  );
+
+  const choose = useCallback(
+    (q: Queued) => {
+      const d = dataRef.current;
+      if (!d) return;
+      if (!canUseItem(q.item, pro)) return;
+      const cur = d.current;
+      const curDone = cur ? progressOf(cur, cumulativeSince(d.days, d.installDate, todayKey())).done : false;
+      if (cur && !curDone) {
+        commit({ ...d, queued: q });
+        toast('いまの物が編み上がったら、続けて編みはじめます');
+        setStack([]);
+        setTab('home');
+        return;
+      }
+      commit(startFrom(d, q));
+      setStack([]);
+      setTab('home');
+    },
+    [commit, pro, startFrom, toast],
   );
 
   const finishCurrent = useCallback(() => {
@@ -170,9 +226,18 @@ export default function App() {
     if (!d?.current) return;
     const { done, nextStart } = finish(d.current, todayKey());
     success();
-    commit({ ...d, done: [...d.done, done], current: null, carry: nextStart, seen: 0 });
-    setSheet({ kind: 'next' });
-  }, [commit]);
+    const closed: AppData = { ...d, done: [...d.done, done], current: null, carry: nextStart, seen: 0 };
+    if (d.queued && canUseItem(d.queued.item, pro)) {
+      commit(startFrom(closed, d.queued));
+      toast('箱にしまいました。次の物を編みはじめます');
+      setTab('home');
+    } else {
+      commit({ ...closed, queued: null });
+      toast('箱にしまいました');
+      setTab('knit');
+    }
+    setStack([]);
+  }, [commit, pro, startFrom, toast]);
 
   const markSeen = useCallback(
     (n: number) => {
@@ -191,37 +256,51 @@ export default function App() {
     [commit],
   );
 
+  const setRowSteps = useCallback(
+    (n: number) => {
+      const d = dataRef.current;
+      if (d) commit({ ...d, rowSteps: n });
+    },
+    [commit],
+  );
+
   const resetAll = useCallback(async () => {
     await clearData();
-    const fresh = emptyData(todayKey());
-    commit(fresh);
-    setSheet(null);
-    setTab('knit');
+    commit(emptyData(todayKey()));
+    setStack([]);
+    setTab('home');
     setHealth('checking');
   }, [commit]);
 
-  const open = useCallback((s: SheetKind) => {
+  const push = useCallback((r: Route) => {
     tap();
-    setSheet(s);
+    setStack((s) => [...s, r]);
   }, []);
-  // 毛糸ぶくろを、別の面から開いたときは元の面へ戻る
-  const close = useCallback(() => setSheet((s) => (s?.kind === 'paywall' && s.from ? s.from : null)), []);
+  const pop = useCallback(() => {
+    tap();
+    setStack((s) => s.slice(0, -1));
+  }, []);
+  const goTab = useCallback((t: Tab) => {
+    tap();
+    setStack([]);
+    setTab(t);
+  }, []);
 
-  // Android の戻る: 下から出た面を閉じる → 編むタブへ戻る
+  // Android の戻る: 重ねた画面を閉じる → ホームへ戻る → アプリを下げる
   useEffect(
     () =>
       onBack(() => {
-        if (sheet) {
-          close();
+        if (stack.length) {
+          setStack((s) => s.slice(0, -1));
           return true;
         }
-        if (tab !== 'knit') {
-          setTab('knit');
+        if (tab !== 'home') {
+          setTab('home');
           return true;
         }
         return false;
       }),
-    [sheet, tab, close],
+    [stack, tab],
   );
 
   const noData = useMemo(() => {
@@ -243,49 +322,73 @@ export default function App() {
     refresh,
     connect,
     useSource,
-    startProject,
+    choose,
     finishCurrent,
     markSeen,
     importDays,
+    setRowSteps,
     setBilling,
-    open,
-    close,
+    push,
+    pop,
+    goTab,
     toast,
     resetAll,
   };
 
-  if (!data.onboarded) {
-    return <Intro onStart={(palette) => startProject({ item: 'muffler', palette })} />;
-  }
-
+  const top = stack.at(-1);
   const progress = data.current ? progressOf(data.current, cumulative) : null;
+  const finishedNow = !!progress?.done && !top;
+
+  let body: React.ReactNode;
+  if (top) body = <RouteView ctx={ctx} route={top} />;
+  else if (!data.onboarded) body = <Splash onStart={() => push({ name: 'pattern', item: 'muffler' })} />;
+  else if (finishedNow && tab === 'home') body = <Finished ctx={ctx} />;
+  else if (tab === 'home') body = <Home ctx={ctx} progress={progress} />;
+  else if (tab === 'box') body = <Box ctx={ctx} />;
+  else if (tab === 'knit') body = <Pick ctx={ctx} />;
+  else body = <Bag ctx={ctx} />;
+
+  // タブを出すのは、タブの画面と今日の記録だけ(見本どおり)
+  const showTabs = data.onboarded && !(finishedNow && tab === 'home') && (!top || top.name === 'record');
 
   return (
-    <div className="app">
-      <main className="screen" key={tab}>
-        {tab === 'knit' && <Home ctx={ctx} progress={progress} />}
-        {tab === 'log' && <Log ctx={ctx} />}
-        {tab === 'box' && <Box ctx={ctx} />}
+    <div className={`app ${showTabs ? 'has-tabs' : ''}`}>
+      <main className="screen" key={top ? `${stack.length}-${top.name}` : `${tab}-${data.onboarded}`}>
+        {body}
       </main>
-      <TabBar
-        tab={tab}
-        onChange={(t) => {
-          tap();
-          setTab(t);
-        }}
-      />
+      {showTabs && <TabBar tab={top?.name === 'record' ? 'home' : tab} onChange={goTab} />}
       {toastMsg && (
         <div className="toast" role="status">
           {toastMsg}
         </div>
       )}
-      <Sheet open={!!sheet} onClose={close} tall={sheet?.kind === 'privacy' || sheet?.kind === 'next'}>
-        {sheet?.kind === 'settings' && <Settings ctx={ctx} />}
-        {sheet?.kind === 'paywall' && <Paywall ctx={ctx} />}
-        {sheet?.kind === 'next' && <NextSheet ctx={ctx} />}
-        {sheet?.kind === 'piece' && <PieceSheet ctx={ctx} id={sheet.id} />}
-        {sheet?.kind === 'privacy' && <Privacy />}
-      </Sheet>
     </div>
   );
+}
+
+function RouteView({ ctx, route }: { ctx: AppCtx; route: Route }) {
+  switch (route.name) {
+    case 'record':
+      return <Record ctx={ctx} />;
+    case 'settings':
+      return <Settings ctx={ctx} />;
+    case 'source':
+      return <SourcePage ctx={ctx} />;
+    case 'rowsteps':
+      return <RowStepsPage ctx={ctx} />;
+    case 'about':
+      return <About ctx={ctx} />;
+    case 'privacy':
+      return <Privacy ctx={ctx} />;
+    case 'colors':
+      return <Colors ctx={ctx} item={route.item} pattern={route.pattern} />;
+    case 'pattern':
+      return <PatternPage ctx={ctx} item={route.item} />;
+    case 'share':
+      return <ShareView ctx={ctx} id={route.id} />;
+    case 'piece':
+      return <PieceView ctx={ctx} id={route.id} />;
+    case 'bag':
+      return <Bag ctx={ctx} pushed />;
+  }
 }

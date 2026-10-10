@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { composeStitches } from '../art/compose';
 import { ITEMS, heightOf, widthOf } from '../art/items';
 import { MOTIFS, PATTERNS, patternOf } from '../art/motifs';
-import { STITCH, BALL, POMPOM, FRINGE } from '../art/sprites';
-import { PALETTES, YARNS } from '../art/yarns';
+import { PALETTES, YARNS, mix, shadesOf } from '../art/yarns';
 import { parseStepsCsv } from './csv';
 import { emptyData, normalize } from './data';
 
@@ -57,25 +56,29 @@ describe('保存の読み直し', () => {
     expect(d.carry).toBeNull();
     expect(d.seen).toBe(12);
     expect(d.onboarded).toBe(true);
+    expect(d.rowSteps).toBe(500);
+    expect(d.current?.rowSteps).toBe(500);
+    expect(d.queued).toBeNull();
   });
 });
 
 describe('絵の決まり', () => {
-  it('部品の絵は、どの行も同じ幅で、使う文字が決まっている', () => {
-    for (const [name, rows] of Object.entries({ STITCH, BALL, POMPOM, FRINGE })) {
-      for (const r of rows) {
-        expect(r.length, name).toBe(rows[0].length);
-        expect(/^[.0-3]+$/.test(r), `${name}: ${r}`).toBe(true);
-      }
-    }
+  it('色を混ぜる計算', () => {
+    expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080');
+    expect(mix('#d97b80', '#d97b80', 0.3)).toBe('#d97b80');
+    const sh = shadesOf('#d97b80');
+    expect(sh[2]).toBe('#d97b80');
   });
-  it('模様の図案も同じ幅で、. o * だけ', () => {
+  it('模様の図案も同じ幅で、. o * # だけ', () => {
     for (const [name, rows] of Object.entries(MOTIFS)) {
       for (const r of rows) {
         expect(r.length, name).toBe(rows[0].length);
-        expect(/^[.o*]+$/.test(r), `${name}: ${r}`).toBe(true);
+        expect(/^[.o*#]+$/.test(r), `${name}: ${r}`).toBe(true);
       }
     }
+  });
+  it('大きい模様はマフラーの幅(12目)に収まる', () => {
+    for (const pt of PATTERNS) expect(MOTIFS[pt.big][0].length, pt.id).toBeLessThanOrEqual(12);
   });
   it('毛糸の色は4段の濃さがすべて色の書式', () => {
     for (const [name, sh] of Object.entries(YARNS)) {
@@ -98,8 +101,22 @@ describe('絵の決まり', () => {
       }
     }
   });
-  it('模様は、毛糸ぶくろの物と無料の物が半々', () => {
-    expect(PATTERNS.filter((p) => p.pro).length).toBe(6);
-    expect(PALETTES.filter((p) => !p.pro).length).toBe(4);
+  it('見本どおり: 模様6つ(無料3)、毛糸の色8組(無料5)、名前も見本の通り', () => {
+    expect(PATTERNS.map((p) => p.name)).toEqual(['ハート', '雪の結晶', '星', '木の葉', 'いぬ', '北欧風']);
+    expect(PATTERNS.filter((p) => !p.pro).length).toBe(3);
+    expect(PALETTES.map((p) => p.name)).toEqual(['いちごみるく', '空と雪', '森のこもれび', 'ラベンダー', 'カフェオレ', '夜空', 'りんご', 'ミモザ']);
+    expect(PALETTES.filter((p) => p.pro).map((p) => p.name)).toEqual(['夜空', 'りんご', 'ミモザ']);
+  });
+});
+
+describe('1段の歩数と予約の保存', () => {
+  it('選べる値だけを残す', () => {
+    expect(normalize({ rowSteps: 300 }, '2026-10-10').rowSteps).toBe(300);
+    expect(normalize({ rowSteps: 7 }, '2026-10-10').rowSteps).toBe(500);
+  });
+  it('次に編むものの予約は、ある物・ある色だけ', () => {
+    expect(normalize({ queued: { item: 'hat', palette: 'mori', pattern: 'star' } }, '2026-10-10').queued).toEqual({ item: 'hat', palette: 'mori', pattern: 'star' });
+    expect(normalize({ queued: { item: 'hat', palette: 'nope' } }, '2026-10-10').queued).toBeNull();
+    expect(normalize({ queued: { item: 'hat', palette: 'mori', pattern: 'xx' } }, '2026-10-10').queued).toEqual({ item: 'hat', palette: 'mori' });
   });
 });

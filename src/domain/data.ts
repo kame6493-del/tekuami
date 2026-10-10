@@ -2,7 +2,7 @@ import { ITEMS } from '../art/items';
 import { PATTERNS } from '../art/motifs';
 import { PALETTES } from '../art/yarns';
 import { isDayKey } from './dates';
-import type { Project } from './knit';
+import { DEFAULT_ROW_STEPS, ROW_STEPS_CHOICES, type Project } from './knit';
 import type { Days, SensorMark } from './steps';
 
 export type Source = 'health' | 'sensor';
@@ -26,7 +26,19 @@ export interface AppData {
   done: Project[];
   /** 最後に画面で見せた目の数(開いたときに、その続きから編み目を足して見せる) */
   seen: number;
+  /** 1段の歩数の設定(次に編みはじめる物から使う) */
+  rowSteps: number;
+  /** 編んでいる間に選んでおいた、次に編むもの */
+  queued: Queued | null;
 }
+
+export interface Queued {
+  item: string;
+  palette: string;
+  pattern?: string;
+}
+
+const rowStepsOf = (v: unknown) => (typeof v === 'number' && (ROW_STEPS_CHOICES as readonly number[]).includes(v) ? v : DEFAULT_ROW_STEPS);
 
 export function emptyData(today: string): AppData {
   return {
@@ -43,6 +55,8 @@ export function emptyData(today: string): AppData {
     carry: null,
     done: [],
     seen: 0,
+    rowSteps: DEFAULT_ROW_STEPS,
+    queued: null,
   };
 }
 
@@ -72,6 +86,7 @@ function cleanProject(x: unknown): Project | null {
     startTotal: num(p.startTotal),
     startedOn: isDayKey(p.startedOn) ? p.startedOn : '2026-01-01',
     best: num(p.best),
+    rowSteps: rowStepsOf(p.rowSteps),
     ...(isDayKey(p.finishedOn) ? { finishedOn: p.finishedOn } : {}),
   };
 }
@@ -99,5 +114,14 @@ export function normalize(raw: unknown, today: string): AppData {
     carry: typeof r.carry === 'number' && Number.isFinite(r.carry) && r.carry >= 0 ? Math.round(r.carry) : null,
     seen: typeof r.seen === 'number' && Number.isFinite(r.seen) && r.seen >= 0 ? Math.round(r.seen) : 0,
     done: Array.isArray(r.done) ? r.done.map(cleanProject).filter((p): p is Project => !!p) : [],
+    rowSteps: rowStepsOf(r.rowSteps),
+    queued: cleanQueued(r.queued),
   };
+}
+
+function cleanQueued(x: unknown): Queued | null {
+  if (!x || typeof x !== 'object') return null;
+  const q = x as Record<string, unknown>;
+  if (!ITEMS.some((i) => i.id === q.item) || !PALETTES.some((i) => i.id === q.palette)) return null;
+  return { item: q.item as string, palette: q.palette as string, ...(PATTERNS.some((i) => i.id === q.pattern) ? { pattern: q.pattern as string } : {}) };
 }

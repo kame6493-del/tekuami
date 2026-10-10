@@ -54,3 +54,15 @@ export function timeJa(ms: number): string {
 }
 
 export const fmt = (n: number) => Math.max(0, Math.round(n)).toLocaleString('ja-JP');
+
+/** 3月8日 */
+export function mdJa(key: string): string {
+  const d = parseDayKey(key);
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+/** 2026.3.8 */
+export function dotJa(key: string): string {
+  const d = parseDayKey(key);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}

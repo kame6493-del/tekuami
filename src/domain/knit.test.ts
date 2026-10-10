@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, itemOf, stitchColumns } from '../art/items';
 import { PATTERNS } from '../art/motifs';
-import { advance, canUseItem, finish, newProject, nextPattern, progressOf, rowLengths, stepsFor, stitchesFor, stitchOrder, totalStitchesOf, type Project } from './knit';
+import { advance, canUseItem, finish, newProject, nextPattern, progressOf, rowLengths, stepsFor, stitchesFor, stitchOrder, targetSteps, totalStitchesOf, type Project } from './knit';
 
 const base = (over: Partial<Project> = {}): Project => ({
   ...newProject({ item: 'muffler', palette: 'akane', pattern: 'heart', startTotal: 1000, today: '2026-10-09' }),
@@ -23,9 +23,9 @@ describe('編み目の数', () => {
   });
   it('仕上がりの歩数で全部の目が編める・0歩なら0目', () => {
     for (const it of ITEMS) {
-      expect(stitchesFor(it, it.steps)).toBe(totalStitchesOf(it));
+      expect(stitchesFor(it, targetSteps(it, 500))).toBe(totalStitchesOf(it));
       expect(stitchesFor(it, 0)).toBe(0);
-      expect(stepsFor(it, totalStitchesOf(it))).toBe(it.steps);
+      expect(stepsFor(it, totalStitchesOf(it))).toBe(targetSteps(it, 500));
     }
   });
   it('stepsFor と stitchesFor は行き来できる', () => {
@@ -92,7 +92,7 @@ describe('目を置く順番', () => {
   });
   it('ミトンの親指の段は、すき間の列を飛ばす', () => {
     const it = itemOf('mitten');
-    const r = it.rows.length - 1 - 9; // 上から10行目
+    const r = it.rows.length - 1 - 8; // 上から9行目(親指とのすき間)
     expect(stitchColumns(it, r)).not.toContain(2);
   });
 });
@@ -114,13 +114,53 @@ describe('模様の順番', () => {
     expect(nextPattern(hist, false).id).not.toBe('heart');
   });
   it('毛糸ぶくろがあれば選んだ模様、無ければ選べない', () => {
-    expect(nextPattern([], true, 'cat').id).toBe('cat');
-    expect(nextPattern([], false, 'cat').id).not.toBe('cat');
+    expect(nextPattern([], true, 'dog').id).toBe('dog');
+    expect(nextPattern([], false, 'dog').id).not.toBe('dog');
   });
   it('毛糸ぶくろの物は買うまで使えない', () => {
     expect(canUseItem('sweater', false)).toBe(false);
     expect(canUseItem('sweater', true)).toBe(true);
     expect(canUseItem('muffler', false)).toBe(true);
+    expect(canUseItem('sock', false)).toBe(true);
+    expect(canUseItem('blanket', false)).toBe(false);
     expect(canUseItem('nothing', true)).toBe(false);
+  });
+});
+
+describe('1段の歩数', () => {
+  it('どの段も同じ歩数。帽子のてっぺんの短い段も500歩で1段', () => {
+    const hat = itemOf('hat');
+    const p = newProject({ item: 'hat', palette: 'mori', pattern: 'star', startTotal: 0, today: '2026-10-10' });
+    expect(progressOf(p, 0).target).toBe(targetSteps(hat, 500));
+    expect(targetSteps(hat, 500)).toBe(rowLengths(hat).length * 500);
+    // 最後の段(てっぺん)の手前まで
+    const last = rowLengths(hat).length - 1;
+    const pr = progressOf(p, last * 500 + 250);
+    expect(pr.rowsDone).toBe(last);
+    expect(pr.toNextRow).toBe(250);
+    expect(pr.inRow).toBe(Math.floor(rowLengths(hat)[last] / 2));
+  });
+  it('設定で 300歩 にした物は 300歩 で1段進む', () => {
+    const p = newProject({ item: 'muffler', palette: 'ichigo', pattern: 'heart', startTotal: 0, today: '2026-10-10', rowSteps: 300 });
+    const pr = progressOf(p, 650);
+    expect(pr.rowsDone).toBe(2);
+    expect(pr.toNextRow).toBe(250);
+    expect(pr.target).toBe(36 * 300);
+  });
+  it('仕上げの持ち越しも1段の歩数で数える', () => {
+    const p = advance(newProject({ item: 'mitten', palette: 'ichigo', pattern: 'snow', startTotal: 100, today: '2026-10-10', rowSteps: 800 }), 100 + 99999);
+    const { nextStart } = finish(p, '2026-10-11');
+    expect(nextStart).toBe(100 + rowLengths(itemOf('mitten')).length * 800);
+  });
+  it('段の途中の目は、歩数に合わせて1目ずつ増える', () => {
+    const p = newProject({ item: 'muffler', palette: 'ichigo', pattern: 'heart', startTotal: 0, today: '2026-10-10' });
+    let prev = -1;
+    for (let st = 0; st <= 500; st += 10) {
+      const n = progressOf(p, st).stitches;
+      expect(n).toBeGreaterThanOrEqual(prev);
+      prev = n;
+    }
+    expect(progressOf(p, 499).stitches).toBe(11);
+    expect(progressOf(p, 500).stitches).toBe(12);
   });
 });

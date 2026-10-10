@@ -12,6 +12,8 @@ export interface Project {
   startedOn: string;
   /** これまでに届いた一番多い歩数。後から歩数が減っても編んだ段は戻さない */
   best: number;
+  /** 1段の歩数(編みはじめたときの設定。途中で設定を変えても、この1枚は変えない) */
+  rowSteps: number;
   finishedOn?: string;
 }
 
@@ -25,6 +27,8 @@ export interface Progress {
   /** 編んでいる段で、もう編んだ目の数 */
   inRow: number;
   rowLen: number;
+  /** 1段の歩数 */
+  rowSteps: number;
   /** 次の段まで・仕上がりまでの残り歩数 */
   toNextRow: number;
   toFinish: number;
@@ -46,23 +50,37 @@ export function totalStitchesOf(item: ItemDef): number {
   return rowLengths(item).reduce((a, b) => a + b, 0);
 }
 
-/** 1目あたりの歩数 */
-export function stepsPerStitch(item: ItemDef): number {
-  return item.steps / totalStitchesOf(item);
+/** 1段の歩数(設定で選べる)。ふつうは500歩 */
+export const ROW_STEPS_CHOICES = [300, 500, 800, 1000] as const;
+export const DEFAULT_ROW_STEPS = 500;
+
+/** 仕上がりまでの歩数 = 段の数 × 1段の歩数 */
+export function targetSteps(item: ItemDef, rowSteps: number): number {
+  return heightOf(item) * rowSteps;
 }
 
-/** steps 歩で何目まで編めるか */
-export function stitchesFor(item: ItemDef, steps: number): number {
-  const total = totalStitchesOf(item);
-  if (steps >= item.steps) return total;
-  return Math.min(total, Math.floor((steps + 1e-9) / stepsPerStitch(item)));
+/** steps 歩で何目まで編めるか。1段はどの段も同じ歩数で、段の中は目の数で等分する */
+export function stitchesFor(item: ItemDef, steps: number, rowSteps = DEFAULT_ROW_STEPS): number {
+  const lens = rowLengths(item);
+  if (steps >= lens.length * rowSteps) return totalStitchesOf(item);
+  const rows = Math.max(0, Math.floor((steps + 1e-9) / rowSteps));
+  let n = 0;
+  for (let r = 0; r < rows; r++) n += lens[r];
+  const rest = steps - rows * rowSteps;
+  return n + Math.floor((rest * lens[rows] + 1e-9) / rowSteps);
 }
 
 /** n 目編むのに要る歩数 */
-export function stepsFor(item: ItemDef, n: number): number {
-  const total = totalStitchesOf(item);
-  if (n >= total) return item.steps;
-  return Math.ceil(n * stepsPerStitch(item) - 1e-9);
+export function stepsFor(item: ItemDef, n: number, rowSteps = DEFAULT_ROW_STEPS): number {
+  const lens = rowLengths(item);
+  if (n >= totalStitchesOf(item)) return lens.length * rowSteps;
+  let r = 0;
+  let left = n;
+  while (left >= lens[r]) {
+    left -= lens[r];
+    r++;
+  }
+  return r * rowSteps + Math.ceil((left * rowSteps) / lens[r] - 1e-9);
 }
 
 export function rawSteps(p: Project, cumulative: number): number {
@@ -71,30 +89,29 @@ export function rawSteps(p: Project, cumulative: number): number {
 
 export function progressOf(p: Project, cumulative: number): Progress {
   const item = itemOf(p.item);
-  const steps = Math.min(item.steps, Math.max(p.best, rawSteps(p, cumulative)));
+  const R = p.rowSteps;
+  const target = targetSteps(item, R);
+  const steps = Math.min(target, Math.max(p.best, rawSteps(p, cumulative)));
   const lens = rowLengths(item);
   const totalStitches = totalStitchesOf(item);
-  const stitches = stitchesFor(item, steps);
-  let left = stitches;
-  let rowsDone = 0;
-  while (rowsDone < lens.length && left >= lens[rowsDone]) {
-    left -= lens[rowsDone];
-    rowsDone++;
-  }
-  const done = stitches >= totalStitches;
+  const stitches = stitchesFor(item, steps, R);
+  const done = steps >= target;
+  const rowsDone = done ? lens.length : Math.floor(steps / R);
   const rowLen = done ? 0 : lens[rowsDone];
-  const doneThroughRow = stitches - left + rowLen;
+  let before = 0;
+  for (let r = 0; r < rowsDone; r++) before += lens[r];
   return {
     steps,
-    target: item.steps,
+    target,
     stitches,
     totalStitches,
     rowsDone,
     rowsTotal: lens.length,
-    inRow: done ? 0 : left,
+    inRow: done ? 0 : stitches - before,
     rowLen,
-    toNextRow: done ? 0 : Math.max(0, stepsFor(item, doneThroughRow) - steps),
-    toFinish: Math.max(0, item.steps - steps),
+    rowSteps: R,
+    toNextRow: done ? 0 : (rowsDone + 1) * R - steps,
+    toFinish: Math.max(0, target - steps),
     done,
   };
 }
@@ -102,7 +119,7 @@ export function progressOf(p: Project, cumulative: number): Progress {
 /** 新しい歩数を受けて best を更新した Project を返す(変わらなければ同じ物) */
 export function advance(p: Project, cumulative: number): Project {
   const item = itemOf(p.item);
-  const best = Math.min(item.steps, Math.max(p.best, rawSteps(p, cumulative)));
+  const best = Math.min(targetSteps(item, p.rowSteps), Math.max(p.best, rawSteps(p, cumulative)));
   return best === p.best ? p : { ...p, best };
 }
 
@@ -114,8 +131,8 @@ export function stitchOrder(item: ItemDef, r: number): number[] {
 
 /** 編み上がった物を閉じて、余りの歩数を持ち越した次の始まりを返す */
 export function finish(p: Project, today: string): { done: Project; nextStart: number } {
-  const item = itemOf(p.item);
-  return { done: { ...p, best: item.steps, finishedOn: today }, nextStart: p.startTotal + item.steps };
+  const t = targetSteps(itemOf(p.item), p.rowSteps);
+  return { done: { ...p, best: t, finishedOn: today }, nextStart: p.startTotal + t };
 }
 
 /**
@@ -143,7 +160,7 @@ export function canUseItem(id: string, pro: boolean): boolean {
 }
 
 let seq = 0;
-export function newProject(args: { item: string; palette: string; pattern: string; startTotal: number; today: string }): Project {
+export function newProject(args: { item: string; palette: string; pattern: string; startTotal: number; today: string; rowSteps?: number }): Project {
   seq = (seq + 1) % 1000;
   return {
     id: `${args.today}-${Date.now().toString(36)}-${seq}`,
@@ -153,5 +170,6 @@ export function newProject(args: { item: string; palette: string; pattern: strin
     startTotal: Math.max(0, Math.round(args.startTotal)),
     startedOn: args.today,
     best: 0,
+    rowSteps: args.rowSteps ?? DEFAULT_ROW_STEPS,
   };
 }

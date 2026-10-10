@@ -1,11 +1,11 @@
 {
   "name": "tekuami",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node tools/clean.mjs && tsc -b && vite build",
     "test": "vitest run",
     "sync": "npm run build && cap sync",
     "preview": "vite preview"

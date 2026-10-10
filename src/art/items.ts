@@ -2,14 +2,15 @@
  * 編む物の形。1文字が編み目1つ。上の行が仕上がりの上、編むのは下の行から。
  *  . = 無い所  x = 地の編み目  r = ゴム編み(袖口・裾)  h = 差し色(かかと・つま先・縁)
  * 1行ずつ手で置いている。直したら ?art=1 の見本で拡大して確かめる。
+ * 1段は何目でも同じ歩数(設定の「1段の歩数」、ふつう500歩)。
  */
 export type Cell = '.' | 'x' | 'r' | 'h';
 
 export interface ItemDef {
   id: string;
   name: string;
-  /** 仕上がりまでの歩数 */
-  steps: number;
+  /** 箱の絞り込みの名前 */
+  short: string;
   pro: boolean;
   /** 上から下へ */
   rows: readonly string[];
@@ -26,9 +27,7 @@ const HAT = [
   '....xxxxxxxx....',
   '...xxxxxxxxxx...',
   '..xxxxxxxxxxxx..',
-  '.xxxxxxxxxxxxxx.',
-  '.xxxxxxxxxxxxxx.',
-  ...Array.from({ length: 11 }, () => 'xxxxxxxxxxxxxxxx'),
+  ...Array.from({ length: 11 }, () => '.xxxxxxxxxxxxxx.'),
   ...Array.from({ length: 5 }, () => 'rrrrrrrrrrrrrrrr'),
 ];
 
@@ -40,10 +39,7 @@ const MITTEN = [
   '...xxxxxxxxx',
   '...xxxxxxxxx',
   '...xxxxxxxxx',
-  '...xxxxxxxxx',
   '.x.xxxxxxxxx',
-  'xx.xxxxxxxxx',
-  'xx.xxxxxxxxx',
   'xx.xxxxxxxxx',
   'xxxxxxxxxxxx',
   '.xxxxxxxxxxx',
@@ -51,8 +47,6 @@ const MITTEN = [
   '...xxxxxxxxx',
   '...xxxxxxxxx',
   '...xxxxxxxxx',
-  '...xxxxxxxxx',
-  '...rrrrrrrrr',
   '...rrrrrrrrr',
   '...rrrrrrrrr',
   '...rrrrrrrrr',
@@ -110,12 +104,12 @@ const BLANKET = [
 ];
 
 export const ITEMS: readonly ItemDef[] = [
-  { id: 'muffler', name: 'マフラー', steps: 18000, pro: false, rows: MUFFLER, decor: 'fringe' },
-  { id: 'hat', name: 'ニット帽', steps: 16000, pro: false, rows: HAT, decor: 'pompom' },
-  { id: 'mitten', name: 'ミトン', steps: 12000, pro: false, rows: MITTEN, decor: 'none', span: [3, 12] },
-  { id: 'sock', name: 'くつした', steps: 14000, pro: true, rows: SOCK, decor: 'none', span: [1, 8] },
-  { id: 'sweater', name: 'セーター', steps: 30000, pro: true, rows: SWEATER, decor: 'none', span: [7, 21] },
-  { id: 'blanket', name: 'ひざかけ', steps: 40000, pro: true, rows: BLANKET, decor: 'fringe', span: [1, 21] },
+  { id: 'muffler', name: 'マフラー', short: 'マフラー', pro: false, rows: MUFFLER, decor: 'fringe' },
+  { id: 'hat', name: 'ニット帽', short: 'ぼうし', pro: false, rows: HAT, decor: 'pompom', span: [1, 15] },
+  { id: 'mitten', name: 'ミトン', short: 'ミトン', pro: false, rows: MITTEN, decor: 'none', span: [3, 12] },
+  { id: 'sock', name: 'くつした', short: 'くつした', pro: false, rows: SOCK, decor: 'none', span: [1, 8] },
+  { id: 'sweater', name: 'セーター', short: 'セーター', pro: true, rows: SWEATER, decor: 'none', span: [7, 21] },
+  { id: 'blanket', name: 'ひざかけ', short: 'ひざかけ', pro: true, rows: BLANKET, decor: 'fringe', span: [1, 21] },
 ];
 
 export function itemOf(id: string): ItemDef {

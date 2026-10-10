@@ -21,7 +21,7 @@ const SEQUENCE: readonly Band[] = [
   { kind: 'plain', rows: 1 },
 ];
 
-type Role = 'main' | 'sub' | 'accent';
+type Role = 'main' | 'sub' | 'accent' | 'dark';
 type Line = { motif: readonly string[]; line: number; whole: boolean };
 
 /** 地の段(x)の段番号 → その段の模様の行(上から何行目か)と、どの模様か */
@@ -40,8 +40,8 @@ function bodyPlan(pattern: Pattern, bodyRows: number): (Line | Role)[] {
     else {
       const big = b.kind === 'big';
       const m = MOTIFS[big ? pattern.big : pattern.band];
-      // 模様は下の行から編むので、図案の一番下の行から積む。大きい模様は8目以上の物だけ欠けを避ける
-      for (let k = m.length - 1; k >= 0; k--) plan.push({ motif: m, line: k, whole: big && m[0].length >= 6 });
+      // 模様は下の行から編むので、図案の一番下の行から積む。大きい模様は欠けを避けて真ん中に1つ(繰り返し模様は横に並べる)
+      for (let k = m.length - 1; k >= 0; k--) plan.push({ motif: m, line: k, whole: big && !pattern.repeat && m[0].length >= 6 });
     }
   }
   const out = plan.slice(0, bodyRows);
@@ -51,7 +51,7 @@ function bodyPlan(pattern: Pattern, bodyRows: number): (Line | Role)[] {
 }
 
 function roleOf(ch: string): Role {
-  return ch === 'o' ? 'sub' : ch === '*' ? 'accent' : 'main';
+  return ch === 'o' ? 'sub' : ch === '*' ? 'accent' : ch === '#' ? 'dark' : 'main';
 }
 
 /**
@@ -78,7 +78,7 @@ export function composeStitches(item: ItemDef, palette: Palette, pattern: Patter
   const planOfRow = new Map<number, (typeof plan)[number]>();
   bodyRowIdx.forEach((r, i) => planOfRow.set(r, plan[i]));
 
-  const yarnOf = (role: Role): YarnId => (role === 'main' ? palette.main : role === 'sub' ? palette.sub : palette.accent);
+  const yarnOf = (role: Role): YarnId => (role === 'main' ? palette.main : role === 'sub' ? palette.sub : role === 'dark' ? 'bark' : palette.accent);
   const out: (Stitch | null)[][] = [];
   for (let r = 0; r < H; r++) {
     const row = rowFromBottom(item, r);

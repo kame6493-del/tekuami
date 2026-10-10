@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AppCtx } from '../App';
 import { itemOf } from '../art/items';
-import { patternOf } from '../art/motifs';
-import { pieceTitle, renderShareImage, shareText } from '../art/shareImage';
-import { fmt, labelJa, timeJa } from '../domain/dates';
+import { paletteOf } from '../art/yarns';
+import { fmt, labelJa } from '../domain/dates';
 import { rowLengths, type Progress } from '../domain/knit';
-import { HEALTH_CONNECT_PLAY_URL, openHealthSettings, readerFor, sensorAvailableOnThisPlatform } from '../platform/health';
-import { openUrl, platform, shareImage, success, tap } from '../platform/native';
-import { IconGear, IconRefresh } from './icons';
-import { FinishedFill, Stage } from './Pixel';
+import { lastNDays } from '../domain/steps';
+import { HEALTH_CONNECT_PLAY_URL, openHealthSettings, sensorAvailableOnThisPlatform } from '../platform/health';
+import { openUrl, platform, success, tap } from '../platform/native';
+import { Cloud, Confetti, IconGear, IconSparkle, KnitStage, Ref } from './parts';
 
 /** 見せた目の数から今の目の数まで、1目ずつ足して見せる */
 function useKnitAnimation(target: number, seen: number, onDone: (n: number) => void) {
   const [shown, setShown] = useState(Math.min(seen, target));
-  const [frame, setFrame] = useState(0);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   useEffect(() => {
@@ -25,13 +23,10 @@ function useKnitAnimation(target: number, seen: number, onDone: (n: number) => v
     const gap = target - shown;
     // 多いときは速く。長くても2秒ほどで追いつく
     const step = Math.max(1, Math.ceil(gap / 40));
-    const t = window.setTimeout(() => {
-      setShown((n) => Math.min(target, n + step));
-      setFrame((f) => 1 - f);
-    }, 50);
+    const t = window.setTimeout(() => setShown((n) => Math.min(target, n + step)), 50);
     return () => window.clearTimeout(t);
   }, [shown, target]);
-  return { shown, frame: shown < target ? frame : 0 };
+  return shown;
 }
 
 function rowsOf(item: string, stitches: number): number {
@@ -45,157 +40,163 @@ function rowsOf(item: string, stitches: number): number {
   return r;
 }
 
+/** 今週(月曜から今日まで)の歩数 */
+export function weekSteps(ctx: AppCtx): number {
+  const { data, today } = ctx;
+  const dow = (new Date(today + 'T00:00:00').getDay() + 6) % 7;
+  return lastNDays(data.days, data.imported, today, dow + 1).reduce((a, d) => a + d.steps, 0);
+}
+
 export function Home({ ctx, progress }: { ctx: AppCtx; progress: Progress | null }) {
   const { data, today, health } = ctx;
   const p = data.current;
   const todaySteps = data.days[today] ?? 0;
+  const [celebrate, setCelebrate] = useState(0);
   const startRows = useRef(p ? rowsOf(p.item, Math.min(data.seen, progress?.stitches ?? 0)) : 0);
-  const { shown, frame } = useKnitAnimation(progress?.stitches ?? 0, data.seen, (n) => {
+  const shown = useKnitAnimation(progress?.stitches ?? 0, data.seen, (n) => {
     if (!p) return;
     const gained = rowsOf(p.item, n) - startRows.current;
     if (n !== data.seen) {
       if (gained > 0) {
         success();
-        ctx.toast(`前に開いたときから ${gained}段 編めました`);
+        setCelebrate(gained);
       }
       ctx.markSeen(n);
     }
     startRows.current = rowsOf(p.item, n);
   });
 
-  const reader = readerFor(data.source);
   const ready = health === 'ready' && !ctx.noData;
-
-  const share = async () => {
-    if (!p || !progress) return;
-    tap();
-    try {
-      const url = renderShareImage(p, progress, today);
-      const r = await shareImage(url, shareText(p, progress), `tekuami-${today}.png`);
-      if (r === 'saved') ctx.toast('画像を保存しました');
-    } catch {
-      ctx.toast('画像を作れませんでした');
-    }
-  };
+  const rowSteps = p?.rowSteps ?? data.rowSteps;
+  const toNext = progress && ready ? progress.toNextRow : rowSteps;
+  const near = ready && toNext <= 50;
+  const rowsShown = p ? rowsOf(p.item, shown) : 0;
+  const rowsTotal = progress?.rowsTotal ?? 0;
+  const segs = 6;
 
   return (
     <div className="home">
-      <header className="topbar">
-        <span className="topbar-date">{labelJa(today)}</span>
-        <button className="icon-btn" aria-label="設定" onClick={() => ctx.open({ kind: 'settings' })}>
-          <IconGear />
-        </button>
-      </header>
+      <div className="home-scene">
+        <Ref name="home_window" className="home-bg" />
+        <header className="home-top">
+          <span className="home-date">{labelJa(today)}</span>
+          <button className="icon-btn home-gear" aria-label="設定" onClick={() => ctx.push({ name: 'settings' })}>
+            <IconGear />
+          </button>
+        </header>
 
-      <section className="hero" aria-live="polite">
-        <p className="hero-label">今日の歩数</p>
-        {ready || todaySteps > 0 ? (
-          <p className="hero-num">
-            <span className="num">{fmt(todaySteps)}</span>
-            <span className="unit">歩</span>
-          </p>
+        {celebrate > 0 ? (
+          <div className="home-celebrate" aria-live="polite">
+            <Confetti />
+            <Cloud className="cloud-row">{celebrate === 1 ? '1段編めました!' : `${celebrate}段編めました!`}</Cloud>
+          </div>
         ) : (
-          <p className="hero-num">
-            <span className="hero-wait">まだ読んでいません</span>
-          </p>
-        )}
-        {p && progress && ready && !progress.done && (
-          <p className="hero-next">
-            次の段まで あと <strong className="num">{fmt(progress.toNextRow)}</strong>歩
-          </p>
-        )}
-        {p && progress?.done && <p className="hero-next">編み上がりました</p>}
-      </section>
-
-      <section className="work">
-        {p && progress ? (
-          <>
-            <p className="work-title">{pieceTitle(p)}</p>
-            {progress.done ? (
-              <FinishedFill item={p.item} palette={p.palette} pattern={p.pattern} label={`${pieceTitle(p)}。編み上がり`} room={0.86} />
+          <section className="counter" aria-live="polite">
+            <p className="counter-label">{p ? '次の段まで' : 'つぎのあみものを'}</p>
+            {p ? (
+              <p className={`counter-num ${near ? 'is-near' : ''}`}>
+                <span className="counter-ato">あと</span>
+                <span className="num">{fmt(toNext)}</span>
+                <span className="counter-unit">歩</span>
+              </p>
             ) : (
-              <Stage
-                item={p.item}
-                palette={p.palette}
-                pattern={p.pattern}
-                stitches={shown}
-                rowsDone={rowsOf(p.item, shown)}
-                frame={frame}
-                label={`${pieceTitle(p)}。${progress.rowsTotal}段のうち${progress.rowsDone}段まで編めています`}
-              />
+              <p className="counter-num">
+                <span className="counter-ato">選びましょう</span>
+              </p>
             )}
-          </>
-        ) : (
-          <div className="work-empty">
-            <p>次に編む物を選ぶと、余った歩数の分から編みはじめます。</p>
-          </div>
+            {near && <IconSparkle className="counter-spark" />}
+          </section>
         )}
-      </section>
 
-      {p && progress && !progress.done && (
-        <section className="meter" aria-label="仕上がりまで">
-          <div className="meter-track">
-            <div className="meter-fill" style={{ width: `${(progress.steps / progress.target) * 100}%` }} />
-          </div>
-          <div className="meter-row">
-            <span className="num">
-              {progress.rowsDone} / {progress.rowsTotal}段
-            </span>
-            <span>
-              仕上がりまで <span className="num">{fmt(progress.toFinish)}</span>歩
-            </span>
-          </div>
+        <section className="home-work">
+          {p && progress ? (
+            <KnitStage
+              item={p.item}
+              palette={p.palette}
+              pattern={p.pattern}
+              stitches={shown}
+              label={`${paletteOf(p.palette).name}の${itemOf(p.item).name}。${progress.rowsTotal}段のうち${progress.rowsDone}段まで編めています`}
+            />
+          ) : (
+            <div className="home-empty">
+              <Ref name="empty" className="home-empty-art" />
+            </div>
+          )}
         </section>
-      )}
+      </div>
 
-      <section className="action">
-        <ActionPanel ctx={ctx} progress={progress} reader={reader.label} onShare={share} />
-      </section>
+      <div className="home-lower">
+        {p && progress && (
+          <section className="rows" aria-label="段の進み">
+            <p className="rows-text num">
+              {rowsShown}段 <span className="rows-sep">/</span> {rowsTotal}段
+            </p>
+            <div className="rows-bar">
+              {Array.from({ length: segs }, (_, i) => {
+                const frac = shown === progress.stitches ? (progress.rowsDone + progress.inRow / Math.max(1, progress.rowLen)) / Math.max(1, rowsTotal) : rowsShown / Math.max(1, rowsTotal);
+                const f = Math.max(0, Math.min(1, frac * segs - i));
+                return (
+                  <span key={i} className="rows-seg">
+                    <span className="rows-fill" style={{ width: `${f * 100}%` }} />
+                  </span>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {celebrate > 0 ? (
+          <div className="home-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                tap();
+                setCelebrate(0);
+              }}
+            >
+              つぎの段へ
+            </button>
+            <button className="btn btn-cream" onClick={() => ctx.push({ name: 'share' })}>
+              画像で見る
+            </button>
+          </div>
+        ) : !p ? (
+          <div className="note-card">
+            <p className="note-head">次に編むものを選ぶと、余った歩数から編みはじめます</p>
+            <button className="btn btn-primary" onClick={() => ctx.goTab('knit')}>
+              あみものを選ぶ
+            </button>
+          </div>
+        ) : (
+          <StatePanel ctx={ctx} todaySteps={todaySteps} />
+        )}
+      </div>
     </div>
   );
 }
 
-function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress: Progress | null; reader: string; onShare: () => void }) {
+function StatePanel({ ctx, todaySteps }: { ctx: AppCtx; todaySteps: number }) {
   const { data, health } = ctx;
-  const p = data.current;
 
-  if (!p) {
-    return (
-      <div className="panel">
-        <button className="btn btn-primary" onClick={() => ctx.open({ kind: 'next' })}>
-          次に編む物を選ぶ
-        </button>
-      </div>
-    );
-  }
-
-  if (progress?.done) {
-    return (
-      <div className="panel">
-        <p className="panel-text">
-          模様は「{patternOf(p.pattern).name}」でした。
-        </p>
-        <div className="btn-row">
-          <button className="btn btn-quiet" onClick={onShare}>
-            見せる
-          </button>
-          <button className="btn btn-primary" onClick={ctx.finishCurrent}>
-            箱にしまって次へ
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (health === 'checking') return <div className="panel panel-quiet" />;
+  if (health === 'checking') return <div className="stat-cards is-quiet" />;
 
   if (health === 'needsPermission') {
     return (
-      <div className="panel">
-        <p className="panel-head">歩数をつなぐと、編みはじめます</p>
-        <p className="panel-text">{reader}の歩数を読むだけです。書きこみも、外へ送ることもしません。</p>
+      <div className="note-card hc-card">
+        <div className="hc-icons" aria-hidden>
+          <Ref name="icon_health" />
+          <span className="hc-dots">・・</span>
+          <Ref name="icon_hc" />
+        </div>
+        <p className="note-text">
+          {platform === 'android' ? 'ヘルスコネクト' : 'ヘルスケア'}から歩数を読み取ると、歩いた分だけ編めます。
+          <span className="note-small">(書き込みは行いません)</span>
+        </p>
         <button className="btn btn-primary" onClick={ctx.connect}>
-          {reader}とつなぐ
+          連携する
+        </button>
+        <button className="btn-link" onClick={() => ctx.push({ name: 'privacy' })}>
+          詳しく見る
         </button>
       </div>
     );
@@ -203,11 +204,11 @@ function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress
 
   if (health === 'notInstalled' || health === 'needsUpdate') {
     return (
-      <div className="panel">
-        <p className="panel-head">{health === 'needsUpdate' ? 'ヘルスコネクトの更新が要ります' : 'ヘルスコネクトが入っていません'}</p>
-        <p className="panel-text">歩数はヘルスコネクトから読みます。入れられない時は、この端末の歩数センサーでも数えられます。</p>
-        <div className="btn-row">
-          <button className="btn btn-quiet" onClick={() => ctx.useSource('sensor')}>
+      <div className="note-card">
+        <p className="note-head">{health === 'needsUpdate' ? 'ヘルスコネクトの更新が要ります' : 'ヘルスコネクトが入っていません'}</p>
+        <p className="note-text">入れられない時は、この端末の歩数センサーでも数えられます。</p>
+        <div className="btn-pair">
+          <button className="btn btn-cream" onClick={() => ctx.useSource('sensor')}>
             センサーを使う
           </button>
           <button className="btn btn-primary" onClick={() => openUrl(HEALTH_CONNECT_PLAY_URL)}>
@@ -220,18 +221,18 @@ function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress
 
   if (health === 'unsupported') {
     return (
-      <div className="panel">
-        <p className="panel-head">この端末では歩数を読めません</p>
-        <p className="panel-text">歩数は iPhone か Android のスマホで読めます。別の記録アプリの歩数は、設定から読み込めます。</p>
+      <div className="note-card">
+        <p className="note-head">この端末では歩数を読めません</p>
+        <p className="note-text">歩数は iPhone か Android のスマホで読めます。ほかの記録アプリの歩数は、設定から読み込めます。</p>
       </div>
     );
   }
 
   if (health === 'error') {
     return (
-      <div className="panel">
-        <p className="panel-head">歩数を読めませんでした</p>
-        <p className="panel-text">少し時間をおいて、もう一度読んでみてください。</p>
+      <div className="note-card">
+        <p className="note-head">歩数を読めませんでした</p>
+        <p className="note-text">少し時間をおいて、もう一度読んでみてください。</p>
         <button className="btn btn-primary" onClick={ctx.refresh}>
           もう一度読む
         </button>
@@ -243,22 +244,22 @@ function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress
     const ios = platform === 'ios' || platform === 'web';
     const sensorSwitch = platform === 'android' && data.source !== 'sensor' && sensorAvailableOnThisPlatform();
     return (
-      <div className="panel">
-        <p className="panel-head">{ctx.noData && health !== 'denied' ? 'まだ歩数が届いていません' : '歩数を読む許可がありません'}</p>
-        <p className="panel-text">
+      <div className="note-card">
+        <p className="note-head">{ctx.noData && health !== 'denied' ? 'まだ歩数が届いていません' : '歩数を読む許可がありません'}</p>
+        <p className="note-text">
           {data.source === 'sensor'
             ? '設定のアプリ一覧から「てくあみ」を開き、「身体活動」を許可すると数えはじめます。'
             : ios
-              ? 'ヘルスケアのアプリで、右上の自分のアイコン → アプリ → てくあみ と進み、「歩数」をオンにすると届きます。'
+              ? 'ヘルスケアのアプリで、自分のアイコン → アプリ → てくあみ と進み、「歩数」をオンにすると届きます。'
               : 'ヘルスコネクトの設定で、てくあみに「歩数」の読み取りを許可すると届きます。'}
         </p>
-        <div className="btn-row">
+        <div className="btn-pair">
           {sensorSwitch ? (
-            <button className="btn btn-quiet" onClick={() => ctx.useSource('sensor')}>
+            <button className="btn btn-cream" onClick={() => ctx.useSource('sensor')}>
               センサーを使う
             </button>
           ) : (
-            <button className="btn btn-quiet" onClick={ctx.refresh}>
+            <button className="btn btn-cream" onClick={ctx.refresh}>
               読み直す
             </button>
           )}
@@ -266,8 +267,7 @@ function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress
             className="btn btn-primary"
             onClick={async () => {
               tap();
-              const ok = await openHealthSettings();
-              if (!ok) ctx.toast('設定を開けませんでした');
+              if (!(await openHealthSettings())) ctx.toast('設定を開けませんでした');
             }}
           >
             {ios ? 'ヘルスケアを開く' : '設定を開く'}
@@ -277,15 +277,43 @@ function ActionPanel({ ctx, progress, reader, onShare }: { ctx: AppCtx; progress
     );
   }
 
+  // 歩けなかった日: 責めずに、休む絵を出す
+  if (todaySteps === 0) {
+    return (
+      <button className="rest-card" onClick={() => ctx.push({ name: 'record' })}>
+        <Ref name="rest" className="rest-art" />
+        <span className="rest-text">
+          今日はゆっくり休みましょう。
+          <br />
+          また、ここから編めます。
+        </span>
+      </button>
+    );
+  }
+
   return (
-    <div className="panel panel-row">
-      <button className="read-state" onClick={ctx.refresh} disabled={ctx.reading} aria-label="歩数を読み直す">
-        <IconRefresh />
-        <span>{ctx.reading ? '読んでいます' : data.lastReadAt ? `${timeJa(data.lastReadAt)} に読みました` : '読み直す'}</span>
-      </button>
-      <button className="btn btn-quiet btn-compact" onClick={onShare}>
-        編みかけを見せる
-      </button>
-    </div>
+    <button className="stat-cards" onClick={() => ctx.push({ name: 'record' })} aria-label="今日の記録を見る">
+      <span className="stat">
+        <Ref name="card_steps" className="stat-icon" />
+        <span className="stat-body">
+          <span className="stat-label">今日の歩数</span>
+          <span className="stat-num">
+            <span className="num">{fmt(todaySteps)}</span>
+            <span className="stat-unit">歩</span>
+          </span>
+        </span>
+      </span>
+      <span className="stat-div" aria-hidden />
+      <span className="stat">
+        <Ref name="card_week" className="stat-icon" />
+        <span className="stat-body">
+          <span className="stat-label">今週</span>
+          <span className="stat-num">
+            <span className="num">{fmt(weekSteps(ctx))}</span>
+            <span className="stat-unit">歩</span>
+          </span>
+        </span>
+      </span>
+    </button>
   );
 }

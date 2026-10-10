@@ -1,77 +1,41 @@
 /*
- * てくあみ デザインの決まり
- * - 色: 生成りの紙の地に、茜(あかね)1色。中間色は墨の濃淡だけ。グラデーション・ぼかし・影の重ねは使わない
- * - 文字: 端末の日本語フォント。大きさは 12 / 15 / 17 / 22 / 44 の5段。数字は等幅
- * - 余白: 8 の倍数(4 は線と文字の間だけ)
- * - 角丸: 6(ボタン・小さな部品)と 14(下から出る面)の2つ
+ * てくあみ デザインの決まり(1.1.0、持ち主の見本に合わせて作り直し)
+ * - 色: 生成りの地に、いちごミルクのようなピンク〜赤。文字はこげ茶。木・毛糸の絵の暖かい色に合わせる
+ * - 文字: 丸みのある読みやすいゴシック(iPhone はヒラギノ丸ゴ、ほかは端末の日本語フォント)。手書き風は使わない
+ * - 形: ボタンは丸い(高さ52の半分の丸み)、札・カードは角丸16〜18
+ * - 絵本の絵と合わせるため、暗い色の画面(ダークモード)は持たない
  */
 :root {
-  --paper: #f4efe4;
-  --paper-2: #ece5d6;
-  --sheet: #fbf8f1;
-  --ink: #2a2420;
-  --ink-2: #6b6158;
-  --ink-3: #9a8f83;
-  --rule: #ddd3c3;
-  --akane: #b23f29;
-  --akane-press: #943221;
-  --akane-ink: #fffaf4;
-  --akane-wash: #f0ddd3;
-  --ok: #3f6b4c;
+  --paper: #fbf3e6;
+  --paper-2: #f6ead8;
+  --card: #fffaf2;
+  --card-edge: #efe0ca;
+  --card-shadow: #e9d8bf;
+  --ink: #4b3426;
+  --ink-2: #7c6455;
+  --ink-3: #a8968a;
+  --pink: #d9646f;
+  --pink-dark: #c25260;
+  --pink-edge: #e3858e;
+  --pink-soft: #f8e1dd;
+  --tan: #e7d9c5;
+  --ring-bg: #e2d1ba;
+  --cloud: #fef8ec;
+  --cloud-edge: #eddcc4;
+  --orange: #e7a246;
+  --blue: #7398c6;
+  --lock: #e0901f;
 
   --f-cap: 12px;
-  --f-body: 15px;
-  --f-lead: 17px;
+  --f-small: 14px;
+  --f-body: 16px;
+  --f-lead: 18px;
   --f-title: 22px;
-  --f-hero: 44px;
-
-  --s1: 8px;
-  --s2: 16px;
-  --s3: 24px;
-  --s4: 32px;
-  --s5: 40px;
-  --s6: 48px;
-
-  --r-s: 6px;
-  --r-l: 14px;
+  --f-hero: 52px;
 
   --tap: 48px;
-  --tabbar: 56px;
+  --tabbar: 66px;
 
-  --font: -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', sans-serif;
+  --font: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'Hiragino Sans', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', sans-serif;
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --paper: #1a1613;
-    --paper-2: #231e1a;
-    --sheet: #24201b;
-    --ink: #efe7db;
-    --ink-2: #b4a898;
-    --ink-3: #82786c;
-    --rule: #3a332c;
-    --akane: #de6a4e;
-    --akane-press: #c45a40;
-    --akane-ink: #1a1613;
-    --akane-wash: #3d241d;
-    --ok: #86b391;
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme='dark'] {
-  --paper: #1a1613;
-  --paper-2: #231e1a;
-  --sheet: #24201b;
-  --ink: #efe7db;
-  --ink-2: #b4a898;
-  --ink-3: #82786c;
-  --rule: #3a332c;
-  --akane: #de6a4e;
-  --akane-press: #c45a40;
-  --akane-ink: #1a1613;
-  --akane-wash: #3d241d;
-  --ok: #86b391;
-  color-scheme: dark;
 }

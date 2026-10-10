@@ -18,8 +18,13 @@ def edit(rel, fn):
 edit('variables.gradle', lambda s: s.replace('minSdkVersion = 24', 'minSdkVersion = 26'))
 
 
+VERSION_CODE = 2
+VERSION_NAME = '1.1.0'
+
+
 def gradle(s):
-    s = s.replace('versionName "1.0"\n', 'versionName "1.0.0"\n')
+    s = re.sub(r'versionCode \d+', f'versionCode {VERSION_CODE}', s)
+    s = re.sub(r'versionName "[^"]*"', f'versionName "{VERSION_NAME}"', s)
     if 'TK_UPLOAD_STORE' not in s:
         s = s.replace(
             """    buildTypes {

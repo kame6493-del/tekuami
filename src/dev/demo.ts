@@ -1,13 +1,14 @@
 import { addDays } from '../domain/dates';
 import { emptyData, type AppData } from '../domain/data';
-import type { Project } from '../domain/knit';
+import { itemOf } from '../art/items';
+import { stitchesFor, type Project } from '../domain/knit';
 import { cumulativeSince, type Days } from '../domain/steps';
 
 /**
  * ブラウザで画面を確かめるための作り物(端末のアプリでは使わない)。
  * ?demo=ready|denied|notinstalled|nodata|unsupported  歩数の読み取りの状態
  * ?today=6240  今日の歩数
- * ?seed=mid|done|box  途中まで進んだ記録で始める(画面写真用)
+ * ?seed=mid|row|done|box|boxpro|fresh  途中まで進んだ記録で始める(画面写真用)。row は開くと1段編み上がる
  */
 function param(name: string): string | null {
   try {
@@ -38,7 +39,7 @@ export function demoDays(today: string): Days {
 }
 
 function project(id: string, item: string, palette: string, pattern: string, startTotal: number, startedOn: string, best: number, finishedOn?: string): Project {
-  return { id, item, palette, pattern, startTotal, startedOn, best, ...(finishedOn ? { finishedOn } : {}) };
+  return { id, item, palette, pattern, startTotal, startedOn, best, rowSteps: 500, ...(finishedOn ? { finishedOn } : {}) };
 }
 
 export function seedData(today: string): AppData | null {
@@ -51,21 +52,33 @@ export function seedData(today: string): AppData | null {
   d.days = demoDays(today);
   d.lastReadAt = Date.now();
   const cum = cumulativeSince(d.days, d.installDate, today);
-  if (seed === 'mid') d.current = project('m1', 'muffler', 'akane', 'heart', cum - 11240, addDays(today, -2), 11240);
-  if (seed === 'done') d.current = project('m1', 'muffler', 'kon', 'snow', cum - 18000, addDays(today, -3), 18000);
+  const seen = (p: Project, extra = 0) => stitchesFor(itemOf(p.item), p.best, p.rowSteps) - extra;
+  if (seed === 'mid') {
+    d.current = project('m1', 'muffler', 'ichigo', 'heart', cum - 1680, addDays(today, -1), 1680);
+    d.seen = seen(d.current);
+  }
+  if (seed === 'show') {
+    d.current = project('m1', 'muffler', 'ichigo', 'heart', cum - 7180, addDays(today, -2), 7180);
+    d.seen = seen(d.current);
+  }
+  if (seed === 'row') {
+    d.current = project('m1', 'muffler', 'ichigo', 'heart', cum - 2000, addDays(today, -1), 2000);
+    d.seen = seen(d.current, 3);
+  }
+  if (seed === 'done') d.current = project('m1', 'muffler', 'ichigo', 'heart', cum - 18000, addDays(today, -7), 18000);
   if (seed === 'box' || seed === 'boxpro') {
     d.installDate = addDays(today, -26);
     d.done = [
-      project('b1', 'muffler', 'akane', 'heart', 0, addDays(today, -26), 18000, addDays(today, -23)),
-      project('b2', 'mitten', 'momi', 'tree', 18000, addDays(today, -23), 12000, addDays(today, -21)),
-      project('b3', 'hat', 'karashi', 'snow', 30000, addDays(today, -21), 16000, addDays(today, -19)),
-      project('b4', 'muffler', 'kon', 'zigzag', 46000, addDays(today, -19), 18000, addDays(today, -16)),
-      project('b5', 'sock', 'aotake', 'check', 64000, addDays(today, -16), 14000, addDays(today, -14)),
-      project('b6', 'sweater', 'kuro', 'diamond', 78000, addDays(today, -14), 30000, addDays(today, -9)),
-      project('b7', 'hat', 'moku', 'cat', 108000, addDays(today, -9), 16000, addDays(today, -7)),
+      project('b1', 'muffler', 'ichigo', 'heart', 0, addDays(today, -26), 18000, addDays(today, -23)),
+      project('b2', 'muffler', 'sora', 'snow', 18000, addDays(today, -23), 18000, addDays(today, -20)),
+      project('b3', 'hat', 'mori', 'star', 36000, addDays(today, -20), 10000, addDays(today, -18)),
+      project('b4', 'mitten', 'ichigo', 'snow', 46000, addDays(today, -18), 9500, addDays(today, -16)),
+      project('b5', 'sock', 'sora', 'heart', 55500, addDays(today, -16), 11500, addDays(today, -14)),
+      project('b6', 'blanket', 'sora', 'nordic', 67000, addDays(today, -14), 14000, addDays(today, -9)),
     ];
     const cum2 = cumulativeSince(d.days, d.installDate, today);
-    d.current = project('c1', 'blanket', 'sora', 'star', cum2 - 21300, addDays(today, -6), 21300);
+    d.current = project('c1', 'hat', 'lavender', 'star', cum2 - 4300, addDays(today, -2), 4300);
+    d.seen = seen(d.current);
   }
   return d;
 }

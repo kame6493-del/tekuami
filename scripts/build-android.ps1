@@ -46,8 +46,12 @@ try {
   if ($p.ExitCode -ne 0) { Get-Content "$env:TEMP\tk_release_err.txt" -Tail 40; throw "Gradle が失敗しました (exit $($p.ExitCode))" }
   $out = Join-Path $repo 'releases'
   New-Item -ItemType Directory -Force $out | Out-Null
-  Copy-Item "$proj\app\build\outputs\bundle\release\app-release.aab" "$out\tekuami-1.0.0-vc1-release.aab" -Force
-  Copy-Item "$proj\app\build\outputs\apk\release\app-release.apk" "$out\tekuami-1.0.0-vc1-release.apk" -Force
+  # 版は app/build.gradle から読む(tools/patch_android.py が書く)
+  $gradleText = Get-Content "$repo\android\app\build.gradle" -Raw
+  $vc = [regex]::Match($gradleText, 'versionCode (\d+)').Groups[1].Value
+  $vn = [regex]::Match($gradleText, 'versionName "([^"]+)"').Groups[1].Value
+  Copy-Item "$proj\app\build\outputs\bundle\release\app-release.aab" "$out\tekuami-$vn-vc$vc-release.aab" -Force
+  Copy-Item "$proj\app\build\outputs\apk\release\app-release.apk" "$out\tekuami-$vn-vc$vc-release.apk" -Force
   Write-Output "出力: $out"
 } finally {
   subst $drive /D

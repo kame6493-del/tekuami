@@ -15,11 +15,11 @@ os.makedirs(RAW, exist_ok=True)
 os.makedirs(os.path.join(STORE, 'iphone'), exist_ok=True)
 os.makedirs(os.path.join(STORE, 'play'), exist_ok=True)
 
-PAPER = (0xF4, 0xEF, 0xE4)
-INK = (0x2A, 0x24, 0x20)
-INK2 = (0x6B, 0x61, 0x58)
-RULE = (0xDD, 0xD3, 0xC3)
-AKANE = (0xB2, 0x3F, 0x29)
+PAPER = (0xFB, 0xF3, 0xE6)
+INK = (0x4B, 0x34, 0x26)
+INK2 = (0x7C, 0x64, 0x55)
+RULE = (0xEF, 0xE0, 0xCA)
+AKANE = (0xD9, 0x64, 0x6F)
 FONT = 'C:/Windows/Fonts/NotoSansJP-VF.ttf'
 
 
@@ -33,19 +33,20 @@ def font(size, weight='Bold'):
 
 
 # (名前, 開くクエリ, 押す物, 見出し, 一言)
+NL = chr(10)
 SHOTS = [
-    ('1_knit', 'seed=mid', [], '歩いた分だけ、\nひと目ずつ編める', '1段はだいたい500歩。あと少しが見える。'),
-    ('2_done', 'seed=done', [], '模様は、\n編み上がるまで秘密', '何が出てくるかは、歩いてからのお楽しみ。'),
-    ('3_box', 'seed=box', ['箱'], '編んだ物は、\n箱にずっと残る', 'マフラー、帽子、ミトン、くつした。'),
-    ('4_next', 'seed=done', ['箱にしまって次へ'], '次は何を編もう', '色を選んで、余った歩数から編みはじめる。'),
-    ('5_log', 'seed=mid', ['記録'], '広告なし。\n記録は端末の中だけ', 'ヘルスケアの歩数を読むだけ。書きこまない。'),
+    ('1_knit', 'seed=show', [], '歩いた分だけ、' + NL + 'ひと目ずつ編める', '次の段まで、あと少しが見える。'),
+    ('2_done', 'seed=done', [], '模様は、' + NL + '編み上がるまで秘密', '何が出てくるかは、歩いてからのお楽しみ。'),
+    ('3_box', 'seed=box&tab=box', [], '編んだものは、' + NL + '木の棚にずっと残る', 'マフラー、帽子、ミトン、くつした。'),
+    ('4_next', 'seed=mid&tab=knit', [], '次は何を編もう', '余った歩数は、次のあみものへ。'),
+    ('5_log', 'seed=show&route=record', [], '広告なし。' + NL + '記録は端末の中だけ', 'ヘルスケアの歩数を読むだけ。書きこまない。'),
 ]
 
 
 def take_raw():
     with serve(os.path.join(ROOT, 'dist')) as base, sync_playwright() as p:
         b = p.chromium.launch()
-        for kind, (vw, vh) in [('iphone', (430, 932)), ('play', (360, 640))]:
+        for kind, (vw, vh) in [('iphone', (430, 932)), ('play', (405, 720))]:
             for name, query, clicks, *_ in SHOTS:
                 ctx = b.new_context(viewport={'width': vw, 'height': vh}, device_scale_factor=3, color_scheme='light')
                 pg = ctx.new_page()
@@ -57,12 +58,6 @@ def take_raw():
                 pg.wait_for_timeout(2800)
                 pg.screenshot(path=os.path.join(RAW, f'{kind}_{name}.png'))
                 ctx.close()
-        # フィーチャー画像用の仕上がりの絵
-        pg = b.new_page()
-        for item, pal, pat in [('muffler', 'akane', 'heart'), ('hat', 'momi', 'snow'), ('mitten', 'kon', 'tree')]:
-            pg.goto(f'{base}/index.html?art=piece&item={item}&pal={pal}&pat={pat}&scale=2')
-            pg.wait_for_timeout(300)
-            pg.locator('#icon').screenshot(path=os.path.join(RAW, f'piece_{item}.png'), omit_background=True)
         b.close()
 
 
@@ -106,18 +101,26 @@ def compose(kind, W, H, scale):
 
 
 def feature():
+    """1024x500。左に名前、右に冬の窓辺・毛糸のかご・眠る猫(見本のスプラッシュの絵)"""
     W, H = 1024, 500
     c = Image.new('RGB', (W, H), PAPER)
+    art = Image.open(os.path.join(ROOT, 'src', 'assets', 'ref', 'splash.webp')).convert('RGB')
+    # かごと猫のあたり(木々の下から雪の上まで)
+    box = (0, int(art.height * 0.43), art.width, int(art.height * 0.86))
+    part = art.crop(box)
+    k = H / part.height
+    part = part.resize((int(part.width * k), H), Image.LANCZOS)
+    x0 = W - part.width
+    # 左の端は生成りへなだらかに
+    mask = Image.new('L', part.size, 255)
+    md = ImageDraw.Draw(mask)
+    for i in range(120):
+        md.line([(i, 0), (i, H)], fill=int(255 * i / 120))
+    c.paste(part, (x0, 0), mask)
     d = ImageDraw.Draw(c)
-    d.text((64, 150), 'てくあみ', font=font(84), fill=INK)
-    d.rectangle((64, 268, 64 + 56, 274), fill=AKANE)
-    d.text((64, 296), '歩いて編む歩数計', font=font(40, 'Regular'), fill=INK2)
-    x = 580
-    for item in ['muffler', 'mitten']:
-        im = Image.open(os.path.join(RAW, f'piece_{item}.png')).convert('RGBA')
-        y = (H - im.height) // 2
-        c.paste(im, (x, y), im)
-        x += im.width + 40
+    d.text((70, 150), 'てくあみ', font=font(96), fill=(0x6E, 0x3D, 0x27))
+    d.rounded_rectangle((72, 282, 72 + 64, 290), 4, fill=AKANE)
+    d.text((70, 312), '歩いて編む歩数計', font=font(40), fill=INK)
     c.save(os.path.join(STORE, 'play', 'feature_1024x500.png'))
 
 
