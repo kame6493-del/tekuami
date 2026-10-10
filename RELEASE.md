@@ -28,7 +28,7 @@
 3. Playwright(tools/e2e.py): 375×667 と 430×932 で、スプラッシュ → 模様 → 毛糸の色 → 完成イメージ → 連携 → 12段編めた → どんな模様が? → ホーム → くわしく(今日の記録・カレンダー・前の月)→ 設定(連携・1段の歩数・データの扱い・使い方・お問い合わせ・ポリシー・このアプリについて・テーマ よる/ゆき/ひだまり とホームの切り替わり)→ 毛糸ぶくろ(購入)→ 図鑑 → 編むもの → 模様(いぬ)→ 毛糸の色(あかずきん)→ 完成イメージ → 次に編む → 空の箱 → 完成 → 画像を保存する → 箱にしまう → 箱 → 作品の詳細 → 画像で見る 3種 → 箱(6つ+編み中)・絞り込み・詳細の前後 → 図鑑 → 1段編めた → 画像で見る(編みかけ)→ 1日の終わり(21時)→ 歩けなかった日 → よるテーマ → ゆきの夜 → 失敗の画面4種 → 購入準備中。大きい文字(文字だけ1.3倍)で10画面。74画面すべて通過(横のはみ出し・英語の取り残し・押せる所 40px 以上・絵の読み込み も機械で確認)
 4. 画面写真を全部目で見て直した所: 編み地が大きすぎて猫と重なる、弧が数字に重なる、知らせが主ボタンに重なる(上に移した)、毛糸の色の名前のはみ出し、大きい文字で吹き出しの「あと」が折り返す、椅子の写真で掛け方がずれる、フィーチャー画像の右端の縁
 5. Android: releases/tekuami-1.2.0-vc3-release.aab(9,883,821 バイト。10MB 未満にするため、使っていない切り出し37枚を外した)/ 確認用 APK releases/tekuami-1.2.0-vc3-release.apk。1.0.0・1.1.0 と同じ鍵(証明書 SHA256 D4:35:4C:…:00:54)、jarsigner -verify 通過、aapt2 で versionCode 3 / 1.2.0・健康の権限は READ_STEPS だけ・ウィジェットの receiver 2つが入っていることを確認。端末での起動・ウィジェットの見た目は未確認(エミュレーター無し)
-6. iOS: MARKETING_VERSION 1.2.0、Main.storyboard を MainViewController に、App Group の権限を本体と拡張に。ワークフローに tools/ios_add_widget.py とアーカイブ内の TekuamiWidget.appex の確認を足した。Actions の compile_only の結果は下の「iOS」
+6. iOS: MARKETING_VERSION 1.2.0、Main.storyboard を MainViewController に、App Group の権限を本体と拡張に。ワークフローに tools/ios_add_widget.py とアーカイブ内の TekuamiWidget.appex の確認を足した。Actions の compile_only(署名なしのコンパイル)は 2026-10-10 に成功(run 38017521775。TekuamiWidget.appex も組まれた)
 
 ## iOS(1.2.0 で増えた不確かさ)
 - App Group group.jp.tekuami.app と、拡張の App ID jp.tekuami.app.widget を Apple 側で用意する必要がある(API キーの自動署名で作られなければ、Developer サイトで作って両方の App ID に App Group を付ける)
