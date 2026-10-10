@@ -194,7 +194,8 @@ def run(b, base, width, height):
     expect(pg.get_by_role('heading', name='プライバシーポリシー')).to_be_visible()
     back(pg)
     pg.get_by_role('button', name='このアプリについて').click()
-    expect(pg.get_by_text('バージョン 1.2.0')).to_be_visible()
+    expect(pg.get_by_text('バージョン 1.2.1')).to_be_visible()
+    expect(pg.get_by_alt_text('てくあみのアイコン')).to_be_visible()
     back(pg)
     # 見た目(テーマ): よる → ホームが夜、ゆき → 雪、ひだまりに戻す
     pg.get_by_role('button', name=re.compile('^見た目')).click()

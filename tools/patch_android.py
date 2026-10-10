@@ -18,8 +18,8 @@ def edit(rel, fn):
 edit('variables.gradle', lambda s: s.replace('minSdkVersion = 24', 'minSdkVersion = 26'))
 
 
-VERSION_CODE = 3
-VERSION_NAME = '1.2.0'
+VERSION_CODE = 4
+VERSION_NAME = '1.2.1'
 
 
 def gradle(s):

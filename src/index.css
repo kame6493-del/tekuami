@@ -3219,3 +3219,29 @@ img {
 .bn-num {
   white-space: nowrap;
 }
+
+.about-head {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 4px 0 16px;
+}
+
+.about-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: 0 4px 12px rgba(90, 60, 40, 0.2);
+}
+
+.about-name {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.about-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}

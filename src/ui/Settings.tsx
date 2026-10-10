@@ -9,7 +9,7 @@ import { openUrl, platform, tap } from '../platform/native';
 import { RoomScene } from './Home';
 import { IconChevron, PageHead, Ref } from './parts';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 
 const STATE_TEXT: Record<string, string> = {
   checking: '確かめています',
@@ -397,6 +397,11 @@ export function About({ ctx }: { ctx: AppCtx }) {
   return (
     <div className="page">
       <PageHead title="このアプリについて" onBack={ctx.pop} />
+      <div className="about-head">
+        <Ref name="app_icon" className="about-icon" alt="てくあみのアイコン" />
+        <p className="about-name">てくあみ</p>
+        <p className="about-sub">歩いて編む歩数計</p>
+      </div>
       <ul className="plain-list">
         <li className="plain-row">
           <span className="plain-main">

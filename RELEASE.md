@@ -1,3 +1,17 @@
+# てくあみ 1.2.1 RELEASE(2026-10-10)— アプリアイコンを持ち主の絵に
+
+- アイコンを持ち主から渡された絵(毛糸玉・編み棒・ハートの編み地・足あと)に変えた。原画 store/icon_source_original.png、余白を切って角を生成りで埋めた正方形 store/icon_source_1024.png。書き出しは tools/make_icons.py
+  - iOS AppIcon(1024・不透明)、store/icon_1024.png、store/play/icon_512.png は原画そのまま
+  - Android 適応アイコン: 背景は単色 #FAE5C7、前景は原画の縁(札の影)を除いて 108dp の 56% に縮め、縁をぼかした。直径 66dp の安全域の円に毛糸玉と編み地(右下の角まで)が入ることを、円・角丸四角・しずく形で切った見た目を書き出して確かめた(work/look/launcher.png)。丸アイコンも同じ絵
+  - 起動画面(Android・iOS)も同じ絵。Android の起動画面は AAB を 10MB 未満に保つため、絵を小さめ・色数160にした
+  - アプリの中: 「このアプリについて」にアイコンを出した
+  - 1.2.0 のアイコンは store/_v1_2_0_backup/
+- 版: versionCode 4 / 1.2.1(iOS MARKETING_VERSION 1.2.1)。Play の vc3 は下書きのまま審査に出していないので、vc4 に差し替える
+- AAB: releases/tekuami-1.2.1-vc4-release.aab(9,580,637 バイト)/ APK: releases/tekuami-1.2.1-vc4-release.apk。同じ鍵(SHA256 D4:35:4C:…:00:54)、jarsigner -verify 通過、aapt2 で versionCode 4 / 1.2.1・健康の権限は READ_STEPS だけを確認
+- vitest 63件・build・E2E 74画面 通過(このアプリについてのアイコンの表示も確かめる)
+
+---
+
 # てくあみ 1.2.0 RELEASE(2026-10-10)— 見本4枚の良い所を取り入れて作り直し
 
 持ち主の見本4枚(A: てくあみ編み歩数計UIコラージュ / B: 編み物歩数計アプリ UIデザイン集-2 / C: 編み物歩数計「てくあみ」UI提案ボード-3 / D: 歩いて編む、やさしいニットアプリUI大全-4)から仕掛けを取り入れた。絵は見本から切り出して使い(tools/crop_ref.py・tools/crop_ref2.py → src/assets/ref、使わない物は tools/prune_ref.py で消す)、見本に無い絵(編み目・房・ぼんぼん・針・共有画像の編み物、ウィジェットの円)だけ描いた。見本と並べた比較は docs/compare_v2_*.png、一覧は docs/compare_v2_all.png。

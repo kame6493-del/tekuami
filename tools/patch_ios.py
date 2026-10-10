@@ -34,7 +34,7 @@ with open(os.path.join(APP, 'App', 'App.entitlements'), 'wb') as f:
 pbx_path = os.path.join(APP, 'App.xcodeproj', 'project.pbxproj')
 s = open(pbx_path, encoding='utf-8').read()
 s = s.replace('TARGETED_DEVICE_FAMILY = "1,2";', 'TARGETED_DEVICE_FAMILY = 1;')
-s = re.sub(r'MARKETING_VERSION = [0-9.]+;', 'MARKETING_VERSION = 1.2.0;', s)
+s = re.sub(r'MARKETING_VERSION = [0-9.]+;', 'MARKETING_VERSION = 1.2.1;', s)
 if 'CODE_SIGN_ENTITLEMENTS' not in s:
     s = s.replace('INFOPLIST_FILE = App/Info.plist;', 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tINFOPLIST_FILE = App/Info.plist;')
 open(pbx_path, 'w', encoding='utf-8', newline='\n').write(s)
