@@ -12,7 +12,7 @@ export const BILLING = {
   entitlement: 'yarnbag',
   /** ストアから値段が取れないときの表示(ブラウザの確認用) */
   fallbackPrice: '¥480',
-  keys: { ios: '', android: '' },
+  keys: { ios: 'appl_ojdAceeDiJQpKrLXWknfHvsPpgs', android: '' },
 } as const;
 
 export type BillingState =
